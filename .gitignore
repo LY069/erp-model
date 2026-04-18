@@ -1,0 +1,47 @@
+# ── Local databases (live in $HOME, but if anyone symlinks them into the repo) ──
+erp_model.db
+erp_model.db-journal
+erp_model.db.bak-*
+test.db
+test.db-*
+
+# ── Cached market data dumps ──
+histimpl_cache.xls
+histimpl_cache.xlsx
+
+# ── Secrets ──
+.env
+FRED_API_KEY
+*.secret
+
+# ── Generated output ──
+output/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ── IDE / OS ──
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# ── Claude working state (keep launch.json committed, ignore transient bits) ──
+.claude/agents/
+.claude/tmp/
+.claude/sessions/
+.claude/settings.local.json
+
+# ── Node (used once we restore erp-dashboard/ React source in Phase 2) ──
+node_modules/
+dist/
+build/

@@ -1,0 +1,69 @@
+"""
+Per-market configuration for the Damodaran 2-stage ERP solver.
+
+Phase 0: US stub only. Other markets (UK/EU/JP/KR/IN/TW/CN) get their
+MarketSpec entries added in Phases 1, 3, 4. Container and field set
+come from Agent 3 §3 of SHARED_NOTES.md; concrete US values mirror
+what currently lives in config.py so migration stays behaviour-neutral.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True)
+class MarketSpec:
+    code: str
+    name: str
+    currency: str
+    yahoo_index: str
+    yahoo_etf_for_divy: str
+    fred_rfr_series: str
+    fred_rfr_fallback: list[str] = field(default_factory=list)
+    analyst_tickers: list[str] = field(default_factory=list)
+    min_analyst_tickers: int = 8
+    default_payout_ratio: float = 0.60
+    default_buyback_yield: float = 0.0
+    default_analyst_growth: float = 0.06
+    trend_growth_fallback: float = 0.06
+    normal_erp_longrun: float = 0.0475
+    normal_erp_decade: float = 0.055
+    earliest_seed_date: str = "1990-01-01"
+    rfr_max_stale_days: int = 7
+    data_quality: str = "full"
+    notes: str = ""
+
+
+MARKETS: dict[str, MarketSpec] = {
+    "US": MarketSpec(
+        code="US",
+        name="United States",
+        currency="USD",
+        yahoo_index="^GSPC",
+        yahoo_etf_for_divy="SPY",
+        fred_rfr_series="DGS10",
+        fred_rfr_fallback=[],
+        analyst_tickers=[],
+        min_analyst_tickers=8,
+        default_payout_ratio=0.7785,
+        default_buyback_yield=0.02,
+        default_analyst_growth=0.08,
+        trend_growth_fallback=0.06,
+        normal_erp_longrun=0.0425,
+        normal_erp_decade=0.055,
+        earliest_seed_date="1960-01-01",
+        rfr_max_stale_days=7,
+        data_quality="full",
+        notes="Matches Damodaran Jan 2026 snapshot (ERP=4.23%). "
+              "Values mirror config.py defaults so Phase 0 is behaviour-neutral.",
+    ),
+}
+
+
+def get_market(code: str) -> MarketSpec:
+    """Look up a market by ISO-ish code. Raises KeyError with a helpful message."""
+    try:
+        return MARKETS[code]
+    except KeyError as e:
+        known = ", ".join(sorted(MARKETS))
+        raise KeyError(f"Unknown market {code!r}. Known markets: {known}") from e
