@@ -78,7 +78,7 @@ class ERPResult:
     date: str
     implied_r: float               # Solved cost of equity
     implied_erp: float             # r - risk_free_rate
-    sp500_level: float
+    index_level: float
     method: str                    # 'fcfe' or 'ddm'
 
     # FCFE-method inputs
@@ -109,7 +109,7 @@ class ERPResult:
             f"══════════════════════════════════════════════════",
             f"  Implied ERP — {self.date}  [{self.method.upper()} Method]",
             f"══════════════════════════════════════════════════",
-            f"  S&P 500 Level:        {self.sp500_level:>10,.2f}",
+            f"  Index Level:          {self.index_level:>10,.2f}",
         ]
         if self.method == "fcfe":
             lines += [
@@ -348,10 +348,10 @@ def _solve_for_r(index_level: float, cash_flows: List[float],
 
 def compute_erp_fcfe(
     dt: str,
-    sp500_level: float,
+    index_level: float,
     trailing_eps: float,
     analyst_growth: float,
-    tbond_rate: float,
+    rfr_rate: float,
     payout_ratio: float = DEFAULT_PAYOUT_RATIO,
     year1_growth: Optional[float] = None,
     year2_growth: Optional[float] = None,
@@ -361,44 +361,36 @@ def compute_erp_fcfe(
 
     Matches ERPJan26.xlsx methodology:
       - Cash flows = Earnings × Payout Ratio (not yield × index)
-      - Year-by-year growth ramp-down to T-bond rate
-      - Terminal growth = T-bond rate
+      - Year-by-year growth ramp-down to risk-free rate
+      - Terminal growth = risk-free rate
 
     Parameters:
         dt:             Date string (YYYY-MM-DD)
-        sp500_level:    Current S&P 500 index level
-        trailing_eps:   S&P 500 trailing twelve-month earnings per unit
+        index_level:    Current index level (local CCY)
+        trailing_eps:   Index trailing twelve-month earnings per unit
         analyst_growth: Blended analyst 5-yr CAGR (decimal, e.g. 0.1050)
-        tbond_rate:     10-year T-bond rate (decimal)
+        rfr_rate:       Local 10-year sovereign yield (decimal)
         payout_ratio:   Earnings payout ratio (default 78.85%)
         year1_growth:   If available: year 1 analyst estimate (more precise)
         year2_growth:   If available: year 2 analyst estimate (more precise)
-
-    Returns:
-        ERPResult with all computation details
     """
-    g_stable = tbond_rate  # Damodaran's key assumption
+    g_stable = rfr_rate  # Damodaran's key assumption
 
-    # Base cash flow
     base_cf = trailing_eps * payout_ratio
 
-    # Build growth schedule
     if year1_growth is not None and year2_growth is not None:
         growth_rates = build_growth_schedule_detailed(
-            year1_growth, year2_growth, tbond_rate
+            year1_growth, year2_growth, rfr_rate
         )
     else:
-        growth_rates = build_growth_schedule(analyst_growth, tbond_rate)
+        growth_rates = build_growth_schedule(analyst_growth, rfr_rate)
 
-    # Project cash flows
     cash_flows = project_cash_flows(base_cf, growth_rates)
 
-    # Solve
     r_solved, iterations, solver_method = _solve_for_r(
-        sp500_level, cash_flows, g_stable
+        index_level, cash_flows, g_stable
     )
 
-    # Decompose PV
     pv_stage1 = sum(cf / (1 + r_solved) ** t for t, cf in enumerate(cash_flows, 1))
     tv = cash_flows[-1] * (1 + g_stable) / (r_solved - g_stable)
     pv_tv = tv / (1 + r_solved) ** len(cash_flows)
@@ -406,16 +398,16 @@ def compute_erp_fcfe(
     return ERPResult(
         date=dt,
         implied_r=r_solved,
-        implied_erp=r_solved - tbond_rate,
-        sp500_level=sp500_level,
+        implied_erp=r_solved - rfr_rate,
+        index_level=index_level,
         method="fcfe",
         trailing_eps=trailing_eps,
         payout_ratio=payout_ratio,
         base_cash_flow=base_cf,
-        total_yield=base_cf / sp500_level,  # implied yield for display
+        total_yield=base_cf / index_level,
         growth_high=analyst_growth,
         growth_stable=g_stable,
-        risk_free_rate=tbond_rate,
+        risk_free_rate=rfr_rate,
         annual_growth_rates=growth_rates,
         cash_flows=cash_flows,
         terminal_value=tv,
@@ -432,36 +424,27 @@ def compute_erp_fcfe(
 
 def compute_erp_ddm(
     dt: str,
-    sp500_level: float,
+    index_level: float,
     total_yield: float,
     growth_high: float,
-    tbond_rate: float,
+    rfr_rate: float,
     ramped: bool = True,
 ) -> ERPResult:
     """
     DDM-based ERP computation using yield × index as base cash flow.
-
-    Parameters:
-        dt:          Date string (YYYY-MM-DD)
-        sp500_level: Current S&P 500 index level
-        total_yield: Dividend yield + buyback yield (decimal)
-        growth_high: Analyst consensus 5-year growth (decimal)
-        tbond_rate:  10-year T-bond rate (decimal)
-        ramped:      If True (default), use ramped growth; if False, flat growth
     """
-    g_stable = tbond_rate
-    base_cf = sp500_level * total_yield
+    g_stable = rfr_rate
+    base_cf = index_level * total_yield
 
     if ramped:
-        growth_rates = build_growth_schedule(growth_high, tbond_rate)
+        growth_rates = build_growth_schedule(growth_high, rfr_rate)
     else:
-        # Legacy flat growth for backward compatibility
         growth_rates = [growth_high] * PROJECTION_YEARS
 
     cash_flows = project_cash_flows(base_cf, growth_rates)
 
     r_solved, iterations, solver_method = _solve_for_r(
-        sp500_level, cash_flows, g_stable
+        index_level, cash_flows, g_stable
     )
 
     pv_stage1 = sum(cf / (1 + r_solved) ** t for t, cf in enumerate(cash_flows, 1))
@@ -471,16 +454,16 @@ def compute_erp_ddm(
     return ERPResult(
         date=dt,
         implied_r=r_solved,
-        implied_erp=r_solved - tbond_rate,
-        sp500_level=sp500_level,
+        implied_erp=r_solved - rfr_rate,
+        index_level=index_level,
         method="ddm",
-        trailing_eps=base_cf / max(0.001, 0.7785),  # approximate EPS
+        trailing_eps=base_cf / max(0.001, 0.7785),
         payout_ratio=0.7785,
         base_cash_flow=base_cf,
         total_yield=total_yield,
         growth_high=growth_high,
         growth_stable=g_stable,
-        risk_free_rate=tbond_rate,
+        risk_free_rate=rfr_rate,
         annual_growth_rates=growth_rates,
         cash_flows=cash_flows,
         terminal_value=tv,
@@ -497,10 +480,10 @@ def compute_erp_ddm(
 
 def compute_erp(
     dt: str,
-    sp500_level: float,
+    index_level: float,
     total_yield: float,
     growth_high: float,
-    tbond_rate: float,
+    rfr_rate: float,
     method: str = "ddm",
     trailing_eps: Optional[float] = None,
     payout_ratio: float = DEFAULT_PAYOUT_RATIO,
@@ -517,19 +500,19 @@ def compute_erp(
             raise ValueError("FCFE method requires trailing_eps parameter")
         return compute_erp_fcfe(
             dt=dt,
-            sp500_level=sp500_level,
+            index_level=index_level,
             trailing_eps=trailing_eps,
             analyst_growth=growth_high,
-            tbond_rate=tbond_rate,
+            rfr_rate=rfr_rate,
             payout_ratio=payout_ratio,
         )
     else:
         return compute_erp_ddm(
             dt=dt,
-            sp500_level=sp500_level,
+            index_level=index_level,
             total_yield=total_yield,
             growth_high=growth_high,
-            tbond_rate=tbond_rate,
+            rfr_rate=rfr_rate,
             ramped=True,
         )
 
@@ -539,9 +522,9 @@ def compute_erp(
 # ──────────────────────────────────────────────────────────────────────
 
 def forecast_erp(
-    base_sp500: float,
+    base_index_level: float,
     base_eps: float,
-    base_tbond: float,
+    base_rfr: float,
     base_growth: float,
     horizon_years: int = 5,
     payout_ratio: float = DEFAULT_PAYOUT_RATIO,
@@ -551,37 +534,29 @@ def forecast_erp(
     Project implied ERP forward over a horizon under multiple scenarios.
 
     Each scenario specifies annual changes to key inputs:
-        sp500_drift:   Annual % change in S&P 500 (e.g. 0.07 = +7%/yr)
-        eps_growth:    Annual earnings growth (e.g. 0.08 = +8%/yr)
-        rate_drift:    Annual change in T-bond rate (e.g. 0.005 = +50bps/yr)
+        index_drift:   Annual % change in index level
+        eps_growth:    Annual earnings growth
+        rate_drift:    Annual change in risk-free rate
         growth_drift:  Annual change in analyst growth estimate
-
-    Default scenarios:
-        base:  sp500=+7%, eps=+8%, rates flat, growth=current
-        bull:  sp500=+12%, eps=+12%, rates -25bps, growth +2%
-        bear:  sp500=-5%, eps=+3%, rates +50bps, growth -2%
-
-    Returns dict with scenario names as keys and lists of
-    (year, date_label, implied_erp) tuples as values.
     """
     from datetime import date, timedelta
 
     if scenarios is None:
         scenarios = {
             "base": {
-                "sp500_drift": 0.07,
+                "index_drift": 0.07,
                 "eps_growth": 0.08,
                 "rate_drift": 0.00,
                 "growth_drift": 0.00,
             },
             "bull": {
-                "sp500_drift": 0.12,
+                "index_drift": 0.12,
                 "eps_growth": 0.12,
                 "rate_drift": -0.0025,
                 "growth_drift": 0.02,
             },
             "bear": {
-                "sp500_drift": -0.05,
+                "index_drift": -0.05,
                 "eps_growth": 0.03,
                 "rate_drift": 0.005,
                 "growth_drift": -0.02,
@@ -592,41 +567,39 @@ def forecast_erp(
     today = date.today()
 
     for scenario_name, params in scenarios.items():
-        sp500_drift = params.get("sp500_drift", 0.07)
+        index_drift = params.get("index_drift", params.get("sp500_drift", 0.07))
         eps_growth = params.get("eps_growth", 0.08)
         rate_drift = params.get("rate_drift", 0.00)
         growth_drift = params.get("growth_drift", 0.00)
 
         points = []
-        sp500 = base_sp500
+        index_level = base_index_level
         eps = base_eps
-        tbond = base_tbond
+        rfr = base_rfr
         growth = base_growth
 
         for yr in range(1, horizon_years + 1):
-            # Advance inputs by one year
-            sp500 = sp500 * (1 + sp500_drift)
+            index_level = index_level * (1 + index_drift)
             eps = eps * (1 + eps_growth)
-            tbond = max(0.005, tbond + rate_drift)
+            rfr = max(0.005, rfr + rate_drift)
             growth = max(0.01, min(0.30, growth + growth_drift))
 
-            # Compute ERP at this future state
             try:
                 result = compute_erp_fcfe(
                     dt=(today.replace(year=today.year + yr)).isoformat(),
-                    sp500_level=sp500,
+                    index_level=index_level,
                     trailing_eps=eps,
                     analyst_growth=growth,
-                    tbond_rate=tbond,
+                    rfr_rate=rfr,
                     payout_ratio=payout_ratio,
                 )
                 forecast_date = (today.replace(year=today.year + yr)).isoformat()
                 points.append({
                     "year": yr,
                     "date": forecast_date,
-                    "sp500": round(sp500, 2),
+                    "index": round(index_level, 2),
                     "eps": round(eps, 2),
-                    "tbond_rate": round(tbond, 4),
+                    "rfr_rate": round(rfr, 4),
                     "analyst_growth": round(growth, 4),
                     "implied_erp": round(result.implied_erp, 4),
                     "implied_r": round(result.implied_r, 4),
@@ -648,9 +621,9 @@ NORMAL_ERP_LONGRUN = 0.0425    # Long-run average implied ERP (1960-present) ~4.
 NORMAL_ERP_DECADE  = 0.0519    # Last-decade average implied ERP (2015-2025) ~5.19%
 
 def compute_breakeven_growth(
-    sp500_level: float,
+    index_level: float,
     trailing_eps: float,
-    tbond_rate: float,
+    rfr_rate: float,
     target_erp: Optional[float] = None,
     payout_ratio: float = DEFAULT_PAYOUT_RATIO,
     normal_erp_method: str = "longrun",
@@ -675,9 +648,9 @@ def compute_breakeven_growth(
     to justify current prices at normal risk premium).
 
     Parameters:
-        sp500_level:        Current S&P 500 index level
-        trailing_eps:       S&P 500 trailing EPS
-        tbond_rate:         10-year T-bond rate
+        index_level:        Current index level (local CCY)
+        trailing_eps:       Index trailing EPS
+        rfr_rate:           Local 10-year sovereign yield
         target_erp:         Custom target ERP (use with normal_erp_method='custom')
         payout_ratio:       Default 78.85%
         normal_erp_method:  'longrun', 'decade', or 'custom'
@@ -694,19 +667,18 @@ def compute_breakeven_growth(
     else:
         normal_erp = NORMAL_ERP_LONGRUN
 
-    target_r = tbond_rate + normal_erp
+    target_r = rfr_rate + normal_erp
 
-    # Objective: given growth rate g, compute ERP and find g such that ERP = normal_erp
     def erp_minus_target(g: float) -> float:
         if g < -0.20 or g > 0.50:
             return 1e6
         try:
             result = compute_erp_fcfe(
-                dt="2099-01-01",  # dummy date
-                sp500_level=sp500_level,
+                dt="2099-01-01",
+                index_level=index_level,
                 trailing_eps=trailing_eps,
                 analyst_growth=g,
-                tbond_rate=tbond_rate,
+                rfr_rate=rfr_rate,
                 payout_ratio=payout_ratio,
             )
             return result.implied_erp - normal_erp
@@ -717,7 +689,6 @@ def compute_breakeven_growth(
         breakeven_g = brentq(erp_minus_target, a=-0.10, b=0.40,
                               xtol=1e-6, maxiter=200)
     except ValueError:
-        # If brentq fails (no sign change), compute at boundaries to diagnose
         erp_low = erp_minus_target(-0.10) + normal_erp
         erp_high = erp_minus_target(0.40) + normal_erp
         warnings.warn(
@@ -725,14 +696,13 @@ def compute_breakeven_growth(
         )
         breakeven_g = float("nan")
 
-    # Also compute current implied ERP for comparison
     try:
         current_result = compute_erp_fcfe(
             dt="2099-01-01",
-            sp500_level=sp500_level,
+            index_level=index_level,
             trailing_eps=trailing_eps,
-            analyst_growth=tbond_rate * 2,  # neutral starting guess
-            tbond_rate=tbond_rate,
+            analyst_growth=rfr_rate * 2,
+            rfr_rate=rfr_rate,
             payout_ratio=payout_ratio,
         )
         implied_erp_at_neutral = current_result.implied_erp
@@ -745,14 +715,13 @@ def compute_breakeven_growth(
         "normal_erp_method": normal_erp_method,
         "normal_erp_longrun": NORMAL_ERP_LONGRUN,
         "normal_erp_decade": NORMAL_ERP_DECADE,
-        "tbond_rate": tbond_rate,
+        "rfr_rate": rfr_rate,
         "target_implied_r": round(target_r, 4),
-        "sp500_level": sp500_level,
+        "index_level": index_level,
         "trailing_eps": trailing_eps,
         "payout_ratio": payout_ratio,
-        # Interpretation
         "interpretation": (
-            f"The S&P 500 needs earnings to grow at {breakeven_g:.1%}/yr over 5 years "
+            f"The index needs earnings to grow at {breakeven_g:.1%}/yr over 5 years "
             f"to earn a {normal_erp:.2%} ERP ({normal_erp_method} average). "
         ) if not np.isnan(breakeven_g) else "Could not solve breakeven growth.",
     }
@@ -786,10 +755,10 @@ def validate_against_damodaran():
 
     result = compute_erp_fcfe(
         dt="2026-01-01",
-        sp500_level=5881.63,
+        index_level=5881.63,
         trailing_eps=271.52,
         analyst_growth=0.1050,   # 5-yr CAGR from spreadsheet
-        tbond_rate=0.0418,
+        rfr_rate=0.0418,
         payout_ratio=0.7785,
         year1_growth=0.1559,
         year2_growth=0.1448,
@@ -805,10 +774,10 @@ def validate_against_damodaran():
     print("=== Validation: Damodaran 1999 Example (legacy DDM) ===\n")
     result_99 = compute_erp_ddm(
         dt="1999-12-31",
-        sp500_level=1469.0,
+        index_level=1469.0,
         total_yield=0.0168,
         growth_high=0.10,
-        tbond_rate=0.065,
+        rfr_rate=0.065,
         ramped=False,  # 1999 used flat growth
     )
     print(f"  1999 dividends-only ERP: {result_99.implied_erp:.4f}  (expected ~0.0210)")
@@ -816,9 +785,9 @@ def validate_against_damodaran():
     # Test breakeven
     print("\n=== Breakeven Growth Analysis (Jan 2026) ===\n")
     bk = compute_breakeven_growth(
-        sp500_level=5881.63,
+        index_level=5881.63,
         trailing_eps=271.52,
-        tbond_rate=0.0418,
+        rfr_rate=0.0418,
         normal_erp_method="longrun",
     )
     print(f"  Breakeven growth (for 4.25% ERP): {bk['breakeven_growth']:.2%}")

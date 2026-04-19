@@ -105,7 +105,8 @@ def status():
 def latest():
     """Return the most recent computed ERP with all inputs."""
     method = request.args.get("method", "fcfe")
-    row = get_latest(method=method)
+    market = request.args.get("market", "US")
+    row = get_latest(method=method, market=market)
     if row is None:
         return _err("No data in database. Run /api/update first.", 404)
     return _ok({"data": dict(row)})
@@ -117,7 +118,8 @@ def history():
     start  = request.args.get("start", "1900-01-01")
     end    = request.args.get("end",   "2099-12-31")
     method = request.args.get("method", "fcfe")
-    df = get_history(start, end, method=method)
+    market = request.args.get("market", "US")
+    df = get_history(start, end, method=method, market=market)
     if df.empty:
         return _ok({"data": [], "count": 0})
     df["date"] = df["date"].astype(str)
@@ -128,15 +130,15 @@ def history():
 def stats():
     """Return summary statistics across all history."""
     method = request.args.get("method", "fcfe")
-    df = get_history(method=method)
+    market = request.args.get("market", "US")
+    df = get_history(method=method, market=market)
     if df.empty:
-        # Try any method
-        df = get_history()
+        df = get_history(market=market)
     if df.empty:
         return _err("No history available.", 404)
 
     erp = df["implied_erp"]
-    row = get_latest(method=method)
+    row = get_latest(method=method, market=market)
     current_pctile = float((erp < row["implied_erp"]).mean()) if row else None
 
     return _ok({
@@ -174,6 +176,7 @@ def update():
     method         = body.get("method", "fcfe")
     eps_override   = body.get("trailing_eps")
     payout_override = body.get("payout_ratio", DEFAULT_PAYOUT_RATIO)
+    market         = body.get("market", "US")
 
     try:
         inputs = fetch_all_inputs(
@@ -188,23 +191,22 @@ def update():
     if eps_override is not None:
         inputs["trailing_eps"] = float(eps_override)
 
-    # Store inputs
     upsert_inputs(
         dt=inputs["date"],
-        sp500=inputs["sp500_level"],
+        index_level=inputs["index_level"],
         div_yield=inputs["dividend_yield"],
         buyback_yield=inputs["buyback_yield"],
         growth=inputs["analyst_5yr_growth"],
-        tbond=inputs["tbond_10yr_rate"],
+        rfr_rate=inputs["rfr_rate"],
         source=inputs.get("method", "auto"),
         trailing_eps=inputs.get("trailing_eps"),
         payout_ratio=payout_override,
         year1_growth=inputs.get("year1_growth"),
         year2_growth=inputs.get("year2_growth"),
         growth_source=inputs.get("growth_source"),
+        market=market,
     )
 
-    # Compute ERP
     try:
         if method == "fcfe":
             trailing_eps = inputs.get("trailing_eps")
@@ -212,10 +214,10 @@ def update():
                 return _err("FCFE method requires trailing_eps. Provide it manually or use method=ddm", 400)
             result = compute_erp_fcfe(
                 dt=inputs["date"],
-                sp500_level=inputs["sp500_level"],
+                index_level=inputs["index_level"],
                 trailing_eps=trailing_eps,
                 analyst_growth=inputs["analyst_5yr_growth"],
-                tbond_rate=inputs["tbond_10yr_rate"],
+                rfr_rate=inputs["rfr_rate"],
                 payout_ratio=payout_override,
                 year1_growth=inputs.get("year1_growth"),
                 year2_growth=inputs.get("year2_growth"),
@@ -223,10 +225,10 @@ def update():
         else:
             result = compute_erp_ddm(
                 dt=inputs["date"],
-                sp500_level=inputs["sp500_level"],
+                index_level=inputs["index_level"],
                 total_yield=inputs["total_yield"],
                 growth_high=inputs["analyst_5yr_growth"],
-                tbond_rate=inputs["tbond_10yr_rate"],
+                rfr_rate=inputs["rfr_rate"],
                 ramped=True,
             )
     except Exception as e:
@@ -244,6 +246,7 @@ def update():
         method_model=result.method,
         annual_growth_rates=result.annual_growth_rates,
         cash_flows=result.cash_flows,
+        market=market,
     )
 
     return _ok({
@@ -276,34 +279,33 @@ def compute_manual():
     body = request.get_json(silent=True) or {}
     method = body.get("method", "ddm")
     dt = body.get("date", date.today().isoformat())
+    # Accept either "index" or legacy "sp500" for the index level.
+    index_level_raw = body.get("index", body.get("sp500"))
+    rfr_raw = body.get("rfr", body.get("tbond"))
 
     try:
         if method == "fcfe":
-            required = ["sp500", "trailing_eps", "growth", "tbond"]
-            missing = [k for k in required if k not in body]
-            if missing:
-                return _err(f"Missing fields for FCFE: {missing}")
+            if index_level_raw is None or "trailing_eps" not in body or "growth" not in body or rfr_raw is None:
+                return _err("FCFE requires: index (or sp500), trailing_eps, growth, rfr (or tbond)")
             result = compute_erp_fcfe(
                 dt=dt,
-                sp500_level=float(body["sp500"]),
+                index_level=float(index_level_raw),
                 trailing_eps=float(body["trailing_eps"]),
                 analyst_growth=float(body["growth"]),
-                tbond_rate=float(body["tbond"]),
+                rfr_rate=float(rfr_raw),
                 payout_ratio=float(body.get("payout_ratio", DEFAULT_PAYOUT_RATIO)),
                 year1_growth=float(body["year1_growth"]) if "year1_growth" in body else None,
                 year2_growth=float(body["year2_growth"]) if "year2_growth" in body else None,
             )
         else:
-            required = ["sp500", "total_yield", "growth", "tbond"]
-            missing = [k for k in required if k not in body]
-            if missing:
-                return _err(f"Missing fields for DDM: {missing}")
+            if index_level_raw is None or "total_yield" not in body or "growth" not in body or rfr_raw is None:
+                return _err("DDM requires: index (or sp500), total_yield, growth, rfr (or tbond)")
             result = compute_erp_ddm(
                 dt=dt,
-                sp500_level=float(body["sp500"]),
+                index_level=float(index_level_raw),
                 total_yield=float(body["total_yield"]),
                 growth_high=float(body["growth"]),
-                tbond_rate=float(body["tbond"]),
+                rfr_rate=float(rfr_raw),
                 ramped=True,
             )
     except Exception as e:
@@ -342,13 +344,18 @@ def run_forecast():
     Returns scenario projections for display on the forecast chart.
     """
     body = request.get_json(silent=True) or {}
+    market = body.get("market", "US")
 
-    # Use current values from DB if not provided
-    latest = get_latest(method="fcfe") or get_latest(method="ddm") or {}
+    latest = (get_latest(method="fcfe", market=market)
+              or get_latest(method="ddm", market=market) or {})
 
-    sp500   = float(body.get("sp500",   latest.get("sp500_level", 5000)))
-    eps     = float(body.get("eps",     latest.get("trailing_eps") or sp500 / 21.0))
-    tbond   = float(body.get("tbond",   latest.get("tbond_10yr_rate", 0.045)))
+    index_level = float(body.get("index",
+                                 body.get("sp500",
+                                          latest.get("index_level", 5000))))
+    eps     = float(body.get("eps",     latest.get("trailing_eps") or index_level / 21.0))
+    rfr     = float(body.get("rfr",
+                             body.get("tbond",
+                                      latest.get("rfr_rate", 0.045))))
     growth  = float(body.get("growth",  latest.get("analyst_5yr_growth", 0.08)))
     horizon = int(body.get("horizon", 5))
     payout  = float(body.get("payout_ratio", DEFAULT_PAYOUT_RATIO))
@@ -356,9 +363,9 @@ def run_forecast():
 
     try:
         scenarios = forecast_erp(
-            base_sp500=sp500,
+            base_index_level=index_level,
             base_eps=eps,
-            base_tbond=tbond,
+            base_rfr=rfr,
             base_growth=growth,
             horizon_years=horizon,
             payout_ratio=payout,
@@ -369,18 +376,19 @@ def run_forecast():
     base_date = date.today().isoformat()
     if save:
         for scenario_name, points in scenarios.items():
-            upsert_forecast(base_date, scenario_name, points)
+            upsert_forecast(base_date, scenario_name, points, market=market)
 
     return _ok({
         "base_date": base_date,
         "scenarios": scenarios,
         "inputs": {
-            "sp500": sp500,
+            "index": index_level,
             "eps": eps,
-            "tbond": tbond,
+            "rfr": rfr,
             "growth": growth,
             "horizon": horizon,
             "payout_ratio": payout,
+            "market": market,
         }
     })
 
@@ -390,7 +398,8 @@ def get_forecast_data():
     """Return stored forecast data."""
     base_date = request.args.get("base_date")
     scenario  = request.args.get("scenario")
-    df = get_forecasts(base_date=base_date, scenario=scenario)
+    market    = request.args.get("market", "US")
+    df = get_forecasts(base_date=base_date, scenario=scenario, market=market)
     if df.empty:
         return _ok({"data": [], "count": 0})
     return _ok({"data": df.to_dict(orient="records"), "count": len(df)})
@@ -412,21 +421,27 @@ def run_breakeven():
     }
     """
     body = request.get_json(silent=True) or {}
+    market = body.get("market", "US")
 
-    latest = get_latest(method="fcfe") or get_latest(method="ddm") or {}
+    latest = (get_latest(method="fcfe", market=market)
+              or get_latest(method="ddm", market=market) or {})
 
-    sp500  = float(body.get("sp500",  latest.get("sp500_level", 5000)))
-    eps    = float(body.get("eps",    latest.get("trailing_eps") or sp500 / 21.0))
-    tbond  = float(body.get("tbond",  latest.get("tbond_10yr_rate", 0.045)))
+    index_level = float(body.get("index",
+                                 body.get("sp500",
+                                          latest.get("index_level", 5000))))
+    eps    = float(body.get("eps",    latest.get("trailing_eps") or index_level / 21.0))
+    rfr    = float(body.get("rfr",
+                            body.get("tbond",
+                                     latest.get("rfr_rate", 0.045))))
     method = body.get("method", "longrun")
     target = float(body["target_erp"]) if "target_erp" in body else None
     save   = body.get("save", True)
 
     try:
         result = compute_breakeven_growth(
-            sp500_level=sp500,
+            index_level=index_level,
             trailing_eps=eps,
-            tbond_rate=tbond,
+            rfr_rate=rfr,
             target_erp=target,
             normal_erp_method=method,
         )
@@ -436,13 +451,14 @@ def run_breakeven():
     if save:
         upsert_breakeven(
             dt=date.today().isoformat(),
-            sp500=sp500,
+            index_level=index_level,
             eps=eps,
-            tbond=tbond,
+            rfr_rate=rfr,
             breakeven_growth=result["breakeven_growth"],
             normal_erp=result["normal_erp"],
             normal_erp_method=method,
             interpretation=result.get("interpretation", ""),
+            market=market,
         )
 
     return _ok(result)
@@ -451,7 +467,8 @@ def run_breakeven():
 @app.get("/api/breakeven")
 def get_breakeven_data():
     """Return the most recent breakeven computation."""
-    row = get_latest_breakeven()
+    market = request.args.get("market", "US")
+    row = get_latest_breakeven(market=market)
     if row is None:
         return _err("No breakeven data. Run POST /api/breakeven first.", 404)
     return _ok({"data": row})
@@ -461,7 +478,8 @@ def get_breakeven_data():
 def log():
     """Return recent audit log entries."""
     limit = int(request.args.get("limit", 100))
-    df = get_log(limit)
+    market = request.args.get("market")
+    df = get_log(limit, market=market)
     df["created_at"] = df["created_at"].astype(str)
     return _ok({"data": df.to_dict(orient="records")})
 

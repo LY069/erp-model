@@ -327,15 +327,15 @@ def fetch_all_inputs(
         method:           'fcfe' (default) or 'ddm'
 
     Returns dict with keys:
-        date, sp500_level, dividend_yield, buyback_yield, total_yield,
-        analyst_5yr_growth, tbond_10yr_rate,
+        date, index_level, dividend_yield, buyback_yield, total_yield,
+        analyst_5yr_growth, rfr_rate,
         trailing_eps (FCFE method),
         year1_growth, year2_growth (if available)
     """
-    sp500 = fetch_sp500_level(as_of)
+    index_level = fetch_sp500_level(as_of)
     div_yield = fetch_dividend_yield()
     buyback = buyback_override if buyback_override is not None else fetch_buyback_yield()
-    tbond = fetch_tbond_rate()
+    rfr_rate = fetch_tbond_rate()
 
     dt = as_of or date.today().isoformat()
 
@@ -363,14 +363,14 @@ def fetch_all_inputs(
     trailing_eps = None
     if method == "fcfe":
         try:
-            trailing_eps = fetch_trailing_eps(sp500_level=sp500)
+            trailing_eps = fetch_trailing_eps(sp500_level=index_level)
         except Exception as e:
             warnings.warn(f"Trailing EPS fetch failed: {e}; using estimate from P/E")
-            trailing_eps = sp500 / 21.0  # rough fallback: ~21x P/E
+            trailing_eps = index_level / 21.0  # rough fallback: ~21x P/E
 
     return {
         "date": dt,
-        "sp500_level": sp500,
+        "index_level": index_level,
         "dividend_yield": div_yield,
         "buyback_yield": buyback,
         "total_yield": div_yield + buyback,
@@ -378,7 +378,7 @@ def fetch_all_inputs(
         "year1_growth": year1_growth,
         "year2_growth": year2_growth,
         "growth_source": growth_source,
-        "tbond_10yr_rate": tbond,
+        "rfr_rate": rfr_rate,
         "trailing_eps": trailing_eps,
         "payout_ratio": DEFAULT_PAYOUT_RATIO,
         "method": method,

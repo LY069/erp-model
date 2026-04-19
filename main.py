@@ -40,8 +40,9 @@ from visualization import plot_erp_history, plot_inputs_dashboard, print_report,
 def cmd_update(args):
     """Fetch latest market data, compute ERP, store in database."""
     method = getattr(args, 'method', 'fcfe') or 'fcfe'
+    market = getattr(args, 'market', 'US') or 'US'
     print("─" * 60)
-    print(f"  Fetching market data ({method.upper()} method)...")
+    print(f"  Fetching market data ({method.upper()} method, market={market})...")
     print("─" * 60)
 
     buyback_override = float(args.buyback) if args.buyback else None
@@ -65,7 +66,7 @@ def cmd_update(args):
         inputs["trailing_eps"] = eps_override
 
     print(f"  Date:             {inputs['date']}")
-    print(f"  S&P 500 Level:    {inputs['sp500_level']:>10,.2f}")
+    print(f"  Index Level:      {inputs['index_level']:>10,.2f}")
     print(f"  Dividend Yield:   {inputs['dividend_yield']:>10.2%}")
     print(f"  Buyback Yield:    {inputs['buyback_yield']:>10.2%}  "
           f"{'(override)' if buyback_override else '(default)'}")
@@ -80,22 +81,22 @@ def cmd_update(args):
         print(f"    → Year 1:       {inputs['year1_growth']:>10.2%}")
     if inputs.get("year2_growth"):
         print(f"    → Year 2:       {inputs['year2_growth']:>10.2%}")
-    print(f"  T-Bond 10yr:      {inputs['tbond_10yr_rate']:>10.2%}")
+    print(f"  Risk-Free Rate:   {inputs['rfr_rate']:>10.2%}")
 
-    # Store inputs
     upsert_inputs(
         dt=inputs["date"],
-        sp500=inputs["sp500_level"],
+        index_level=inputs["index_level"],
         div_yield=inputs["dividend_yield"],
         buyback_yield=inputs["buyback_yield"],
         growth=inputs["analyst_5yr_growth"],
-        tbond=inputs["tbond_10yr_rate"],
+        rfr_rate=inputs["rfr_rate"],
         source=method,
         trailing_eps=inputs.get("trailing_eps"),
         payout_ratio=payout_override,
         year1_growth=inputs.get("year1_growth"),
         year2_growth=inputs.get("year2_growth"),
         growth_source=inputs.get("growth_source"),
+        market=market,
     )
 
     print("\n  Computing implied ERP...")
@@ -106,19 +107,19 @@ def cmd_update(args):
                 print("  [WARN] No trailing EPS; falling back to DDM method")
                 result = compute_erp_ddm(
                     dt=inputs["date"],
-                    sp500_level=inputs["sp500_level"],
+                    index_level=inputs["index_level"],
                     total_yield=inputs["total_yield"],
                     growth_high=inputs["analyst_5yr_growth"],
-                    tbond_rate=inputs["tbond_10yr_rate"],
+                    rfr_rate=inputs["rfr_rate"],
                     ramped=True,
                 )
             else:
                 result = compute_erp_fcfe(
                     dt=inputs["date"],
-                    sp500_level=inputs["sp500_level"],
+                    index_level=inputs["index_level"],
                     trailing_eps=trailing_eps,
                     analyst_growth=inputs["analyst_5yr_growth"],
-                    tbond_rate=inputs["tbond_10yr_rate"],
+                    rfr_rate=inputs["rfr_rate"],
                     payout_ratio=payout_override,
                     year1_growth=inputs.get("year1_growth"),
                     year2_growth=inputs.get("year2_growth"),
@@ -126,10 +127,10 @@ def cmd_update(args):
         else:
             result = compute_erp_ddm(
                 dt=inputs["date"],
-                sp500_level=inputs["sp500_level"],
+                index_level=inputs["index_level"],
                 total_yield=inputs["total_yield"],
                 growth_high=inputs["analyst_5yr_growth"],
-                tbond_rate=inputs["tbond_10yr_rate"],
+                rfr_rate=inputs["rfr_rate"],
                 ramped=True,
             )
     except Exception as e:
@@ -137,7 +138,6 @@ def cmd_update(args):
         traceback.print_exc()
         sys.exit(1)
 
-    # Store computation
     upsert_computation(
         dt=result.date,
         r=result.implied_r,
@@ -150,6 +150,7 @@ def cmd_update(args):
         method_model=result.method,
         annual_growth_rates=result.annual_growth_rates,
         cash_flows=result.cash_flows,
+        market=market,
     )
 
     print()
@@ -188,23 +189,24 @@ def cmd_export(_args):
     print(f"Exported {len(df)} rows → {path}")
 
 
-def cmd_history(_args):
+def cmd_history(args):
     """Print the last 20 database entries."""
-    df = get_history()
+    market = getattr(args, 'market', 'US') or 'US'
+    df = get_history(market=market)
     if df.empty:
         print("No data in database. Run: python main.py --update")
         return
     recent = df.tail(20).copy()
-    print(f"\n{'Date':<12} {'S&P500':>8} {'Method':>6} {'Growth':>7} "
-          f"{'Tbond':>6} {'Impl.r':>7} {'ERP':>7}")
+    print(f"\n{'Date':<12} {'Index':>8} {'Method':>6} {'Growth':>7} "
+          f"{'Rfr':>6} {'Impl.r':>7} {'ERP':>7}")
     print("─" * 65)
     for _, row in recent.iterrows():
         dt = str(row["date"])[:10]
         m = str(row.get("method", "—"))[:4]
-        print(f"{dt:<12} {row['sp500_level']:>8,.0f} "
+        print(f"{dt:<12} {row['index_level']:>8,.0f} "
               f"{m:>6} "
               f"{row['analyst_5yr_growth']*100:>6.2f}% "
-              f"{row['tbond_10yr_rate']*100:>5.2f}% "
+              f"{row['rfr_rate']*100:>5.2f}% "
               f"{row['implied_cost_of_equity']*100:>6.2f}% "
               f"{row['implied_erp']*100:>6.2f}%")
     print()
@@ -218,66 +220,66 @@ def cmd_validate(_args):
 def cmd_forecast(args):
     """Print forward ERP projections under base/bull/bear scenarios."""
     method = getattr(args, 'method', 'fcfe') or 'fcfe'
-    row = get_latest(method=method) or get_latest()
+    market = getattr(args, 'market', 'US') or 'US'
+    row = get_latest(method=method, market=market) or get_latest(market=market)
     if row is None:
         print("No data in database. Run: python main.py --update")
         return
 
-    sp500  = row["sp500_level"]
-    eps    = row.get("trailing_eps") or sp500 / 21.0
-    tbond  = row["tbond_10yr_rate"]
+    index_level = row["index_level"]
+    eps    = row.get("trailing_eps") or index_level / 21.0
+    rfr    = row["rfr_rate"]
     growth = row["analyst_5yr_growth"]
     payout = row.get("payout_ratio", DEFAULT_PAYOUT_RATIO) or DEFAULT_PAYOUT_RATIO
 
     print(f"\n{'─'*60}")
-    print(f"  Forward ERP Forecast (base: {row['date']})")
-    print(f"  S&P={sp500:,.0f}, EPS={eps:.1f}, T-bond={tbond:.2%}, Growth={growth:.2%}")
+    print(f"  Forward ERP Forecast (base: {row['date']}, market: {market})")
+    print(f"  Index={index_level:,.0f}, EPS={eps:.1f}, Rfr={rfr:.2%}, Growth={growth:.2%}")
     print(f"{'─'*60}")
 
     scenarios = forecast_erp(
-        base_sp500=sp500, base_eps=eps, base_tbond=tbond,
+        base_index_level=index_level, base_eps=eps, base_rfr=rfr,
         base_growth=growth, payout_ratio=payout
     )
 
-    # Store to DB
     base_date = date.today().isoformat()
     for sname, pts in scenarios.items():
-        upsert_forecast(base_date, sname, pts)
+        upsert_forecast(base_date, sname, pts, market=market)
 
-    # Print
     for sname, pts in scenarios.items():
         print(f"\n  {sname.upper()} Scenario:")
-        print(f"  {'Year':>4}  {'Date':<8}  {'S&P':>7}  {'EPS':>6}  {'T-Bond':>7}  {'Growth':>7}  {'ERP':>7}")
+        print(f"  {'Year':>4}  {'Date':<8}  {'Index':>7}  {'EPS':>6}  {'Rfr':>7}  {'Growth':>7}  {'ERP':>7}")
         print(f"  {'─'*60}")
         for pt in pts:
             print(f"  +{pt['year']:>3}  {pt['date'][:7]}  "
-                  f"{pt['sp500']:>7,.0f}  {pt['eps']:>6.1f}  "
-                  f"{pt['tbond_rate']:>6.2%}  {pt['analyst_growth']:>6.2%}  "
+                  f"{pt['index']:>7,.0f}  {pt['eps']:>6.1f}  "
+                  f"{pt['rfr_rate']:>6.2%}  {pt['analyst_growth']:>6.2%}  "
                   f"{pt['implied_erp']:>6.2%}")
 
 
 def cmd_breakeven(args):
     """Compute breakeven earnings growth for normal ERP."""
     method = getattr(args, 'method', 'fcfe') or 'fcfe'
-    row = get_latest(method=method) or get_latest()
+    market = getattr(args, 'market', 'US') or 'US'
+    row = get_latest(method=method, market=market) or get_latest(market=market)
     if row is None:
         print("No data in database. Run: python main.py --update")
         return
 
-    sp500  = row["sp500_level"]
-    eps    = row.get("trailing_eps") or sp500 / 21.0
-    tbond  = row["tbond_10yr_rate"]
+    index_level = row["index_level"]
+    eps    = row.get("trailing_eps") or index_level / 21.0
+    rfr    = row["rfr_rate"]
     payout = row.get("payout_ratio", DEFAULT_PAYOUT_RATIO) or DEFAULT_PAYOUT_RATIO
 
     print(f"\n{'─'*60}")
-    print(f"  Breakeven EPS Growth Analysis ({row['date']})")
-    print(f"  S&P={sp500:,.0f}, EPS={eps:.1f}, T-bond={tbond:.2%}")
+    print(f"  Breakeven EPS Growth Analysis ({row['date']}, market: {market})")
+    print(f"  Index={index_level:,.0f}, EPS={eps:.1f}, Rfr={rfr:.2%}")
     print(f"{'─'*60}\n")
 
     for erp_method in ["longrun", "decade"]:
         result = compute_breakeven_growth(
-            sp500_level=sp500, trailing_eps=eps,
-            tbond_rate=tbond, payout_ratio=payout,
+            index_level=index_level, trailing_eps=eps,
+            rfr_rate=rfr, payout_ratio=payout,
             normal_erp_method=erp_method,
         )
         label = "Long-run (1960–present)" if erp_method == "longrun" else "Last decade (2015–2025)"
@@ -288,11 +290,12 @@ def cmd_breakeven(args):
 
         upsert_breakeven(
             dt=date.today().isoformat(),
-            sp500=sp500, eps=eps, tbond=tbond,
+            index_level=index_level, eps=eps, rfr_rate=rfr,
             breakeven_growth=result["breakeven_growth"],
             normal_erp=result["normal_erp"],
             normal_erp_method=erp_method,
             interpretation=result.get("interpretation", ""),
+            market=market,
         )
 
 
@@ -330,6 +333,8 @@ def main():
     parser.add_argument("--breakeven", action="store_true", help="Compute breakeven EPS growth for normal ERP")
 
     # Update options
+    parser.add_argument("--market",  metavar="CODE",       default="US",
+                        help="Market code (e.g. US, UK). Default: US")
     parser.add_argument("--method",  metavar="STR",       default="fcfe",
                         help="Computation method: 'fcfe' (default) or 'ddm'")
     parser.add_argument("--as-of",  metavar="YYYY-MM-DD",

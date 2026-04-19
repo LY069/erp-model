@@ -87,10 +87,10 @@ def plot_inputs_dashboard(df: pd.DataFrame | None = None,
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     panels = [
-        ("sp500_level",       "S&P 500 Level",          "#2c3e50", False),
+        ("index_level",       "Index Level",             "#2c3e50", False),
         ("total_yield",       "Total Cash Yield (Div + Buyback)", "#27ae60", True),
         ("analyst_5yr_growth","Analyst 5-Year Growth",   "#8e44ad", True),
-        ("tbond_10yr_rate",   "10-Year T-Bond Rate",     "#e67e22", True),
+        ("rfr_rate",          "10-Year Risk-Free Rate",  "#e67e22", True),
     ]
 
     for ax, (col, title, color, as_pct) in zip(axes.flat, panels):
@@ -131,12 +131,13 @@ def print_report():
     print("╚══════════════════════════════════════════════════════════════╝")
     print()
     print(f"  Date:                  {latest['date']}")
-    print(f"  S&P 500 Level:         {latest['sp500_level']:>10,.2f}")
+    print(f"  Market:                {latest.get('market', 'US')}")
+    print(f"  Index Level:           {latest['index_level']:>10,.2f}")
     print(f"  Dividend Yield:        {latest['dividend_yield']:>10.2%}")
     print(f"  Buyback Yield:         {latest['buyback_yield']:>10.2%}")
     print(f"  Total Cash Yield:      {latest['total_yield']:>10.2%}")
     print(f"  Analyst Growth (5yr):  {latest['analyst_5yr_growth']:>10.2%}")
-    print(f"  T-Bond Rate (10yr):    {latest['tbond_10yr_rate']:>10.2%}")
+    print(f"  Risk-Free Rate (10yr): {latest['rfr_rate']:>10.2%}")
     print()
     print(f"  ┌─────────────────────────────────────────────┐")
     print(f"  │  Implied Cost of Equity: {latest['implied_cost_of_equity']:>8.2%}           │")

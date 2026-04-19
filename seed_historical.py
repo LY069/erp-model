@@ -91,11 +91,11 @@ def seed(xls_path: Path, start_year: int = 1961, verbose: bool = True):
         # Store inputs
         upsert_inputs(
             dt=dt,
-            sp500=sp500,
+            index_level=sp500,
             div_yield=div_y,
             buyback_yield=max(0.0, buyback_yield),
             growth=growth,
-            tbond=tbond,
+            rfr_rate=tbond,
             source="damodaran_histimpl",
         )
 
@@ -103,10 +103,10 @@ def seed(xls_path: Path, start_year: int = 1961, verbose: bool = True):
         try:
             result = compute_erp(
                 dt=dt,
-                sp500_level=sp500,
+                index_level=sp500,
                 total_yield=total_yield,
                 growth_high=growth,
-                tbond_rate=tbond,
+                rfr_rate=tbond,
                 method="ddm",
             )
             upsert_computation(
