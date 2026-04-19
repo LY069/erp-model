@@ -1106,4 +1106,38 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             No code changes yet. Next: Phase 0 — git init, write .gitignore, markets_config.py US stub,
             migrations/001_multi_market.py, run migration on ~/erp_model.db, confirm server still works.
             Open: React source location (confirm /erp-dashboard/src/ exists before Phase 2).
+
+2026-04-18  Phase 0 complete. Repo under git (branch=main, 1 commit: 4cdd1ed). Created .gitignore,
+            markets_config.py (US stub mirroring config.py), migrations/001_multi_market.py (idempotent
+            ALTER + composite-PK rebuild + update_runs + market-aware indexes; column renames DEFERRED
+            to Phase 1), CHANGELOG.md, MIGRATION.md. Backed up ~/erp_model.db → ~/erp_model.db.bak-pre0
+            before ALTERs. Migration applied on ~/erp_model.db: 68 inputs + 68 comps preserved,
+            integrity_check=ok. Server verified: python3 server.py → :5001 serves /, /api/latest,
+            /api/history?method=ddm returns 67 points (1961-12-31 → 2026-04-16). Files touched:
+            .gitignore, markets_config.py, migrations/001_multi_market.py, migrations/__init__.py,
+            CHANGELOG.md, MIGRATION.md, SHARED_NOTES.md (status log only). Next: Phase 1 — UK
+            end-to-end; add data_sources/base.py + yahoo_fred.py, extend markets_config with UK,
+            rename sp500_level/tbond_10yr_rate/sp500_projected in schema + all call-sites in one
+            commit, wire ?market= + "market" through server.py, seed UK history.
+            Open: React source location (confirm /erp-dashboard/src/ before Phase 2); also confirm
+            the 'fcfe' method only has 1 row by design (current-value cache) vs needs re-seeding.
+
+2026-04-19  Phase 1 Session A complete. UK end-to-end; 2 commits on main:
+            c15fa08 (column rename: sp500_level→index_level, tbond_10yr_rate→rfr_rate,
+            sp500_projected→index_projected; ~/erp_model.db.bak-pre1 backup; behaviour-neutral
+            verified via stash/pop), 1cb4345 (data_sources/{base,yahoo_fred}.py DataSource
+            Protocol, US delegates to existing helpers for bit-identical numerics, UK MarketSpec
+            wired). UK exit criteria met: ERP=4.56% in [4.0%, 6.5%]; /api/latest?market=UK returns
+            UK row, /api/latest still returns US row unchanged. Robustness fixes during smoke
+            test: MarketSpec.default_rfr_fallback (mirrors default_buyback_yield) for envs
+            without FRED_API_KEY; FY2 falls back when FY1 falls back to prevent absurd blended
+            growth on small ticker pools (UK had 5 tickers → blended 20%→5.7%). Files touched:
+            database.py, data_fetcher.py, erp_calculator.py, server.py, main.py, visualization.py,
+            seed_historical.py, markets_config.py, data_sources/{__init__,base,yahoo_fred}.py.
+            Next: Phase 1 Session B — seed UK history (seed_historical.py per-market loop,
+            VUKE.L div history is short ~2012+; FTSE 100 from ^FTSE goes back to 1984), and
+            fix server.py response.currency (currently hardcoded 'USD' → should read from
+            MarketSpec). Open: React source location (still need /erp-dashboard/src/ for
+            Phase 2); UK rfr currently uses 0.045 default in this dev env — set FRED_API_KEY=...
+            for the live IRLTLT01GBM156N path.
 ```
