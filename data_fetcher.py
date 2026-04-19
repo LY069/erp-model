@@ -316,30 +316,41 @@ def fetch_all_inputs(
     buyback_override: Optional[float] = None,
     growth_override: Optional[float] = None,
     method: str = "fcfe",
+    market: str = "US",
 ) -> dict:
     """
-    Fetch all model inputs in one call.
+    Fetch all model inputs in one call, parameterised by market.
+
+    Routes through `data_sources.get_data_source(market)` so adding a new
+    market only requires a MarketSpec entry. For US, the DataSource layer
+    delegates back to the helpers above so numerics stay bit-for-bit
+    identical to the pre-Phase-1 behaviour.
 
     Parameters:
         as_of:            Historical date override (YYYY-MM-DD)
         buyback_override: Manual buyback yield override
         growth_override:  Manual analyst growth override
         method:           'fcfe' (default) or 'ddm'
-
-    Returns dict with keys:
-        date, index_level, dividend_yield, buyback_yield, total_yield,
-        analyst_5yr_growth, rfr_rate,
-        trailing_eps (FCFE method),
-        year1_growth, year2_growth (if available)
+        market:           Market code (default 'US')
     """
-    index_level = fetch_sp500_level(as_of)
-    div_yield = fetch_dividend_yield()
-    buyback = buyback_override if buyback_override is not None else fetch_buyback_yield()
-    rfr_rate = fetch_tbond_rate()
+    from data_sources import get_data_source
+    from markets_config import get_market
 
+    ds = get_data_source(market)
+    spec = get_market(market)
+
+    as_of_date = date.fromisoformat(as_of) if as_of else None
     dt = as_of or date.today().isoformat()
 
-    # Fetch growth details
+    index_level = ds.fetch_index_level(as_of_date).value
+    div_yield = ds.fetch_dividend_yield(as_of_date).value
+    buyback = (
+        buyback_override
+        if buyback_override is not None
+        else ds.fetch_buyback_yield(as_of_date).value
+    )
+    rfr_rate = ds.fetch_rfr(as_of_date).value
+
     if growth_override is not None:
         growth = growth_override
         year1_growth = growth_override
@@ -347,29 +358,29 @@ def fetch_all_inputs(
         growth_source = "manual override"
     else:
         try:
-            growth_detail = fetch_analyst_growth_detailed()
+            growth_detail = ds.fetch_analyst_growth(as_of_date)
             growth = growth_detail["blended_growth"]
             year1_growth = growth_detail.get("year1_growth", growth)
             year2_growth = growth_detail.get("year2_growth", growth * 0.90)
-            growth_source = growth_detail.get("source", "Yahoo Finance")
+            growth_source = growth_detail.get("source", f"{market} data source")
         except Exception as e:
             warnings.warn(f"Growth fetch failed: {e}")
-            growth = DEFAULT_ANALYST_GROWTH
+            growth = spec.default_analyst_growth
             year1_growth = growth
             year2_growth = growth
             growth_source = "default fallback"
 
-    # Fetch trailing EPS for FCFE method
     trailing_eps = None
     if method == "fcfe":
         try:
-            trailing_eps = fetch_trailing_eps(sp500_level=index_level)
+            trailing_eps = ds.fetch_trailing_eps(as_of_date, index_level=index_level).value
         except Exception as e:
             warnings.warn(f"Trailing EPS fetch failed: {e}; using estimate from P/E")
-            trailing_eps = index_level / 21.0  # rough fallback: ~21x P/E
+            trailing_eps = index_level / 21.0 if index_level else None
 
     return {
         "date": dt,
+        "market": market,
         "index_level": index_level,
         "dividend_yield": div_yield,
         "buyback_yield": buyback,
@@ -380,7 +391,7 @@ def fetch_all_inputs(
         "growth_source": growth_source,
         "rfr_rate": rfr_rate,
         "trailing_eps": trailing_eps,
-        "payout_ratio": DEFAULT_PAYOUT_RATIO,
+        "payout_ratio": spec.default_payout_ratio,
         "method": method,
     }
 

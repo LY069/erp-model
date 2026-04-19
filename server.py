@@ -184,6 +184,7 @@ def update():
             buyback_override=float(buyback) if buyback is not None else None,
             growth_override=float(growth) if growth is not None else None,
             method=method,
+            market=market,
         )
     except Exception as e:
         return _err(f"Data fetch failed: {e}", 502)

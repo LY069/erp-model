@@ -116,10 +116,10 @@ def plot_inputs_dashboard(df: pd.DataFrame | None = None,
     return out
 
 
-def print_report():
+def print_report(market: str = "US"):
     """Print a formatted text report of the current ERP and history."""
-    latest = get_latest()
-    df = get_history()
+    latest = get_latest(market=market)
+    df = get_history(market=market)
 
     if latest is None:
         print("No computations in database. Run: python main.py --update")

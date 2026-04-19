@@ -25,6 +25,7 @@ class MarketSpec:
     default_payout_ratio: float = 0.60
     default_buyback_yield: float = 0.0
     default_analyst_growth: float = 0.06
+    default_rfr_fallback: float | None = None
     trend_growth_fallback: float = 0.06
     normal_erp_longrun: float = 0.0475
     normal_erp_decade: float = 0.055
@@ -56,6 +57,29 @@ MARKETS: dict[str, MarketSpec] = {
         data_quality="full",
         notes="Matches Damodaran Jan 2026 snapshot (ERP=4.23%). "
               "Values mirror config.py defaults so Phase 0 is behaviour-neutral.",
+    ),
+    "UK": MarketSpec(
+        code="UK",
+        name="United Kingdom",
+        currency="GBP",
+        yahoo_index="^FTSE",
+        yahoo_etf_for_divy="VUKE.L",
+        fred_rfr_series="IRLTLT01GBM156N",
+        fred_rfr_fallback=[],
+        analyst_tickers=["SHEL.L", "AZN.L", "HSBA.L", "ULVR.L", "RIO.L"],
+        min_analyst_tickers=8,
+        default_payout_ratio=0.60,
+        default_buyback_yield=0.012,
+        default_analyst_growth=0.06,
+        default_rfr_fallback=0.045,
+        trend_growth_fallback=0.04,
+        normal_erp_longrun=0.0475,
+        normal_erp_decade=0.055,
+        earliest_seed_date="1990-01-01",
+        rfr_max_stale_days=7,
+        data_quality="full",
+        notes="FTSE 100 + VUKE.L (Vanguard FTSE 100 UCITS) for div yield. "
+              "FRED IRLTLT01GBM156N = UK 10Y Gilt. GBP local currency.",
     ),
 }
 

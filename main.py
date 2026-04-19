@@ -56,6 +56,7 @@ def cmd_update(args):
             buyback_override=buyback_override,
             growth_override=growth_override,
             method=method,
+            market=market,
         )
     except Exception as e:
         print(f"\n[ERROR] Data fetch failed: {e}")
@@ -158,9 +159,10 @@ def cmd_update(args):
     print(f"\n  ✓ Results saved to: {DB_PATH.name}")
 
 
-def cmd_report(_args):
+def cmd_report(args):
     """Print formatted report from the database."""
-    print_report()
+    market = getattr(args, 'market', 'US') or 'US'
+    print_report(market=market)
 
 
 def cmd_plot(_args):
