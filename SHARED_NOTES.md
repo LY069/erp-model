@@ -1141,32 +1141,43 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             Phase 2); UK rfr currently uses 0.045 default in this dev env — set FRED_API_KEY=...
             for the live IRLTLT01GBM156N path.
 
-2026-04-25  Phase 1 Session B complete. UK history seeded 1990–2025 + currency leak fixed.
-            Steps: (1) server.py currency overlay — added markets_config.get_market import +
-            _market_currency() helper, /api/latest now overrides DB-row 'USD' default with
-            MarketSpec.currency (UK=GBP verified). (2) database.py upsert_inputs now
-            writes the correct currency from get_market(market).currency (so new rows are
-            authoritative; the server overlay is belt-and-suspenders for legacy rows).
-            (3) seed_historical.py refactored for per-market dispatch: --market US keeps
-            existing Damodaran XLS path; --market UK is a new bootstrap that pulls
-            ^FTSE year-end closes from yfinance and IRLTLT01GBM156N year-end Dec values
-            from FRED (via requests; Py3.14 fredapi has SSL-cert issues), with constant
-            div_yield=3.5% / buyback=1.2% / growth=6% / payout=60% from MarketSpec, tagged
-            data_source='seed:UK:bootstrap'. (4) config.py adds a small .env loader so
-            FRED_API_KEY can live in the gitignored .env (.env is in .gitignore — key
-            NOT committed). Seed run: 36 UK annual rows seeded, 0 skipped, ERP range
-            4.56%–5.52%. Backed up ~/erp_model.db → ~/erp_model.db.bak-pre1b before run.
-            Also UPDATEd 2 legacy UK rows (from Phase 1A live fetch) currency='USD'→'GBP'.
-            Agent 2 §9 validation: ALL pass — 0 ERPs out of [2%,12%]; 0 yoy jumps >300bp;
-            2024-12-31 ERP=5.12% in [4.5%,6.0%] unit-test band; min rfr=0.32% > -0.01
-            terminal-g floor; US history untouched (70 inputs). Files touched: config.py,
-            database.py, server.py, seed_historical.py, .env (gitignored), SHARED_NOTES.md.
-            Next: Phase 2 — confirm /erp-dashboard/src/ React source location; wire the
-            market-picker UI and historical band overlay for UK; seed v1 UK bootstrap is
-            time-flat in inputs (only rfr varies year-to-year), so the historical ERP
-            series captures level but not dynamics — flag this in UI quality_notes when
-            we expose data_source. Open: real FTSE 100 div-yield + payout time series
-            (LSEG/Refinitiv key or FTSE Russell factsheet archive) before Phase 5
-            production hardening; cleanup TODO — server.py currency overlay can be
-            retired once we're confident no legacy rows leak through.
+2026-04-25  Phase 1 Session B complete — PHASE 1 EXIT CRITERIA MET, ready for Phase 2.
+            Work: (1) server.py currency leak fixed — markets_config.get_market import +
+            _market_currency() helper; /api/latest now overrides DB-row 'USD' default
+            with MarketSpec.currency. (2) database.py upsert_inputs now writes the
+            correct currency from get_market(market).currency at insert time so new
+            rows are authoritative (server overlay remains as belt-and-suspenders for
+            legacy rows). (3) seed_historical.py refactored for per-market dispatch:
+            --market US keeps the Damodaran XLS path unchanged; --market UK is a new
+            v1 bootstrap that pulls ^FTSE year-end closes from yfinance and Dec values
+            of FRED IRLTLT01GBM156N (via requests; fredapi has Py3.14 SSL-cert issues),
+            with constant div_yield=3.5% / buyback=1.2% / growth=6% / payout=60% from
+            MarketSpec, tagged data_source='seed:UK:bootstrap'. (4) config.py adds a
+            tiny .env loader so FRED_API_KEY lives in gitignored .env (key NOT
+            committed). Backed up ~/erp_model.db → ~/erp_model.db.bak-pre1b before
+            seed; also UPDATEd 2 legacy UK rows currency 'USD'→'GBP'.
+            Phase 1 exit criteria (Agent 4 §1) — all pass:
+              [✓] `python main.py --update --market UK --report` → ERP=4.69% ∈ [4.0%,6.5%]
+              [✓] /api/history?market=UK&method=ddm → count=36 ≥ 30 annual points
+              [✓] US default unchanged: /api/history (no market) == /api/history?market=US
+                  → count=68 (identical), default still 'US'
+            Agent 2 §9 validation also clean: 0 ERPs out of [2%,12%]; 0 yoy jumps
+            >300bp; 2024-12-31 UK ERP=5.12% in unit-test band [4.5%,6.0%]; min UK
+            rfr=0.32% > -0.01 terminal-g floor.
+            Commit: 6c467b9 (5 files, +248/-25). Files touched: config.py, database.py,
+            server.py, seed_historical.py, SHARED_NOTES.md, plus .env (gitignored).
+            Deferred to follow-up (NOT blockers for Phase 2):
+              · Real FTSE 100 div-yield + payout time series (currently constant
+                bootstrap → seeded ERP captures level but not yoy dynamics; needs
+                LSEG/Refinitiv key or FTSE Russell factsheet archive ingest before
+                Phase 5 production hardening).
+              · Cleanup: retire server.py currency overlay once we're confident no
+                legacy 'USD' rows leak (small win, post-Phase-2 is fine).
+              · UI surfacing of data_source / quality_notes so users can see when a
+                row is bootstrap vs live (Phase 2 work).
+              · Reconcile our UK bootstrap series against Damodaran ctryprem.html
+                Jan 2026 UK ERP (Agent 2 §9 level-check #1) — needs live page fetch.
+            Next session (Phase 2): confirm /erp-dashboard/src/ React source location,
+            wire market-picker UI + historical band overlay for UK.
+            Open (carried from earlier): React source location.
 ```
