@@ -218,16 +218,18 @@ def upsert_inputs(
     market: str = "US",
 ):
     """Insert or replace a row in erp_inputs (keyed by (date, market))."""
+    from markets_config import get_market
+    currency = get_market(market).currency
     conn = get_connection()
     total = div_yield + buyback_yield
     conn.execute("""
         INSERT OR REPLACE INTO erp_inputs
-            (date, market, index_level, dividend_yield, buyback_yield, total_yield,
+            (date, market, currency, index_level, dividend_yield, buyback_yield, total_yield,
              analyst_5yr_growth, year1_growth, year2_growth,
              rfr_rate, trailing_eps, payout_ratio,
              data_source, growth_source, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (dt, market, index_level, div_yield, buyback_yield, total, growth,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (dt, market, currency, index_level, div_yield, buyback_yield, total, growth,
           year1_growth, year2_growth,
           rfr_rate, trailing_eps, payout_ratio,
           source, growth_source, int(time.time())))

@@ -7,6 +7,18 @@ from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
+
+# ── .env loader (gitignored) ───────────────────────────────────────
+# Minimal KEY=VALUE parser; only sets keys not already in os.environ
+_env_file = BASE_DIR / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _line = _line.strip()
+        if not _line or _line.startswith("#") or "=" not in _line:
+            continue
+        _k, _v = _line.split("=", 1)
+        _k, _v = _k.strip(), _v.strip().strip('"').strip("'")
+        os.environ.setdefault(_k, _v)
 OUTPUT_DIR = BASE_DIR / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 

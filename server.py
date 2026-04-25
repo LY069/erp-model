@@ -26,6 +26,7 @@ os.chdir(THIS_DIR)
 sys.path.insert(0, str(THIS_DIR))
 
 from config import OUTPUT_DIR, DEFAULT_PAYOUT_RATIO
+from markets_config import get_market
 from database import (
     init_db, upsert_inputs, upsert_computation, upsert_forecast, upsert_breakeven,
     get_latest, get_history, get_forecasts, get_latest_breakeven, get_log, get_stats
@@ -93,6 +94,11 @@ def _ok(data: dict):
     return jsonify({"ok": True, **data})
 
 
+def _market_currency(market: str) -> str:
+    """Authoritative currency for a market — overrides any stale value carried on a DB row."""
+    return get_market(market).currency
+
+
 # ── Routes ─────────────────────────────────────────────────────────
 
 @app.get("/api/status")
@@ -109,7 +115,9 @@ def latest():
     row = get_latest(method=method, market=market)
     if row is None:
         return _err("No data in database. Run /api/update first.", 404)
-    return _ok({"data": dict(row)})
+    data = dict(row)
+    data["currency"] = _market_currency(market)
+    return _ok({"data": data})
 
 
 @app.get("/api/history")
