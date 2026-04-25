@@ -1180,4 +1180,55 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             Next session (Phase 2): confirm /erp-dashboard/src/ React source location,
             wire market-picker UI + historical band overlay for UK.
             Open (carried from earlier): React source location.
+
+2026-04-25  Phase 1 Session B follow-up — UK seed upgraded from constant-input
+            bootstrap to CSV-driven series. Replaces the bootstrap rows from
+            commit 6c467b9 so the implied UK ERP captures real time-varying
+            dynamics (GFC, COVID).
+            New: data/seed/UK_historical.csv (36 rows, 1990-12-31 → 2025-12-31)
+            with hand-keyed annual dividend_yield from Bank of England Bankstats
+            A.7.4 + Barclays Equity Gilt Study (1990-2001), FTSE Russell monthly
+            factsheets + Bloomberg historical (2002-2024), Vanguard VUKE.L TTM
+            (2025); buyback yield two-bucket (0.5% pre-2010 / 1.2% post-2010);
+            payout flat at 0.60 (Agent 2 §3 anchor). index_level filled live
+            from yfinance ^FTSE Dec close, rfr_rate from FRED IRLTLT01GBM156N
+            December obs at seed time. Citations live in CSV header.
+            Modified: seed_historical.py UK path reads the CSV first; falls back
+            to MarketSpec defaults for any blank field; keeps US Damodaran XLS
+            path bit-identical.
+            Re-seeded ~/erp_model.db: 36 UK DDM rows refreshed; 2 pre-existing
+            UK FCFE live rows (2026-04-19, 2026-04-25) untouched.
+            Agent 2 §9 UK validation, all PASS:
+              [✓] sign check: 0 of 36 ERPs outside [2%, 12%]
+              [✓] yoy moves >300bp: 0
+              [✓] 2-year moves >4pp (no recession flag needed): 0
+              [✓] 2008-12-31 ERP=6.52% ∈ [6%, 9%] (was 5.20% pre-upgrade — now in band)
+              [✓] 2020-12-31 ERP=5.75% ∈ [5%, 8%]
+              [✓] Latest seeded (2025-12-31) ERP=5.33% ∈ [4.0%, 6.5%]
+              [✓] Live main.py --update --market UK --report → 4.69% FCFE ∈ [4.0%, 6.5%]
+              [-] Damodaran ctryprem.html UK reconciliation deferred (live page fetch)
+            Phase 1 exit criteria — all PASS:
+              [✓] /api/latest (no market) returns US, currency=USD, count=68 unchanged
+              [✓] /api/latest?market=UK returns UK, currency=GBP, ERP in band
+              [✓] /api/history?market=UK&method=ddm count=36, earliest=1990-12-31
+              [✓] /api/history (no market = US) count=68 unchanged
+            Files touched: data/seed/UK_historical.csv (NEW), seed_historical.py
+            (UK path rewritten), MIGRATION.md (UK seed section), CHANGELOG.md
+            (v0.phase1 entry), SHARED_NOTES.md (this line).
+            Documented v1 shortfalls (carry to Phase 5 hardening):
+              · Dividend yields hand-keyed (no live BoE/Barclays API); ±0.3pp
+                per-year tolerance. Phase 5 should ingest LSEG/Refinitiv.
+              · Buyback yield is a smoothed two-bucket constant, not a yearly
+                series. Same fix path as #1.
+              · Payout ratio held flat at 0.60. Time-varying UK payout series
+                deferred.
+              · Trailing EPS blank pre-2012 → DDM-only seed pre-2012; FCFE
+                coverage starts 2012 (per Agent 3 §3).
+              · No Damodaran ctryprem.html UK ERP reconciliation (Agent 2 §9
+                level-check #1).
+              · UI surfacing of data_source / quality_notes (Phase 2 work).
+            Recommend `git tag v0.phase1` after this commit.
+            Next session (Phase 2): confirm /erp-dashboard/src/ React source
+            location, wire market-picker UI + historical band overlay for UK.
+            Open (carried from earlier): React source location.
 ```

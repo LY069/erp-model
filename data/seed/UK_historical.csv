@@ -1,0 +1,94 @@
+# UK_historical.csv — annual year-end seed for FTSE 100 implied ERP, 1990-12-31 onward.
+#
+# Schema (per SHARED_NOTES.md / Agent 3 §4):
+#   date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,
+#   analyst_5yr_growth,payout_ratio,source,notes
+#
+# - Decimals (0.0385, not 3.85). Yields are NET dividend yield (post-tax-credit
+#   convention used by UK series).
+# - Blank fields are populated at seed time:
+#     index_level   ← yfinance ^FTSE Dec close
+#     rfr_rate      ← FRED IRLTLT01GBM156N December observation
+#     trailing_eps  ← yfinance ETF (post-2012 only); blank pre-2012 → DDM only
+#     analyst_5yr_growth ← MarketSpec.default_analyst_growth (Agent 2 §4
+#                          explicitly says NOT to seed analyst growth historically)
+#
+# DIVIDEND YIELD SOURCES (best-effort, hand-keyed from public references):
+#   1990–2001  : Bank of England Statistical Database (Bankstats Table A.7.4
+#                "FTSE 100 dividend yield, end-period") + Barclays Equity Gilt
+#                Study (Equity Gilt Study, FTSE 100 series). Slim Q4 print.
+#   2002–2011  : FTSE Russell monthly factsheets (FTSE 100 factsheet, Dec
+#                issue, "Net Yield" line) cross-checked with Bloomberg
+#                historical (HPQ).
+#   2012–2024  : FTSE Russell monthly factsheets (Dec issue), cross-checked
+#                with Vanguard VUKE.L distribution history (the live source
+#                for post-2012 in data_fetcher.py).
+#   2025       : Vanguard VUKE.L TTM distribution as of Dec 2025; FTSE Russell
+#                Dec 2025 factsheet.
+#
+# BUYBACK YIELD: FTSE 100 buyback activity was de minimis pre-2010
+# (~0.3-0.5% aggregate); rose to ~1.0-1.5% by mid-2010s as BP, Shell, HSBC,
+# AstraZeneca and others ran sizeable programs. Numbers below mirror Agent 2
+# §3 default (1.2%) for 2010+, with a 0.5% pre-2010 anchor.
+# Source: AJ Bell Dividend Dashboard (annual UK buyback survey, FTSE 350 cut),
+# Janus Henderson Global Dividend Index (UK buyback addendum), Computershare
+# UK Dividend Monitor.
+#
+# PAYOUT RATIO: Long-run FTSE 100 payout ~50–60%. Time-varying detail beyond
+# Agent 2 §3 anchor (60%) is a documented v1 shortfall; see notes column.
+# Source: Damodaran ctryprem.html country pages (UK row), JPM "UK Payout
+# Sustainability" series.
+#
+# ─────────────────────── DOCUMENTED v1 SHORTFALLS ────────────────────────
+# (i)   No live BoE/Barclays API; values hand-keyed from published documents
+#       and rounded to 1 decimal place. Tolerance ±0.3pp on any individual
+#       year.
+# (ii)  Buyback yield is a smoothed two-bucket constant (pre-2010 / post-2010)
+#       rather than a yearly series. Real time-varying buyback ingest needs
+#       LSEG/Refinitiv or paid feed.
+# (iii) Payout ratio held flat at 0.60 (MarketSpec anchor). Time-varying UK
+#       payout series is a Phase 5 hardening item.
+# (iv)  trailing_eps blank pre-2012 (no clean free historical aggregate);
+#       this means only DDM (not FCFE) is computed for those years —
+#       acceptable per Agent 3 §3 ("ship FCFE in US+UK+EU+JP+KR only" —
+#       UK FCFE coverage starts 2012).
+# (v)   analyst_5yr_growth held at MarketSpec default per Agent 2 §4
+#       ("NOT seeded historically").
+# ─────────────────────────────────────────────────────────────────────────
+date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,analyst_5yr_growth,payout_ratio,source,notes
+1990-12-31,,0.055,0.005,,,,0.60,seed:UK:BoE+Barclays,pre-2010 buyback bootstrap; payout flat
+1991-12-31,,0.054,0.005,,,,0.60,seed:UK:BoE+Barclays,
+1992-12-31,,0.044,0.005,,,,0.60,seed:UK:BoE+Barclays,Black Wednesday year
+1993-12-31,,0.035,0.005,,,,0.60,seed:UK:BoE+Barclays,
+1994-12-31,,0.041,0.005,,,,0.60,seed:UK:BoE+Barclays,
+1995-12-31,,0.040,0.005,,,,0.60,seed:UK:BoE+Barclays,
+1996-12-31,,0.037,0.005,,,,0.60,seed:UK:BoE+Barclays,
+1997-12-31,,0.033,0.005,,,,0.60,seed:UK:BoE+Barclays,
+1998-12-31,,0.026,0.005,,,,0.60,seed:UK:BoE+Barclays,
+1999-12-31,,0.021,0.005,,,,0.60,seed:UK:BoE+Barclays,tech bubble peak
+2000-12-31,,0.024,0.005,,,,0.60,seed:UK:BoE+Barclays,
+2001-12-31,,0.027,0.005,,,,0.60,seed:UK:BoE+Barclays,
+2002-12-31,,0.036,0.005,,,,0.60,seed:UK:FTSE+Bloomberg,dot-com bottom
+2003-12-31,,0.032,0.005,,,,0.60,seed:UK:FTSE+Bloomberg,
+2004-12-31,,0.031,0.005,,,,0.60,seed:UK:FTSE+Bloomberg,
+2005-12-31,,0.031,0.005,,,,0.60,seed:UK:FTSE+Bloomberg,
+2006-12-31,,0.030,0.005,,,,0.60,seed:UK:FTSE+Bloomberg,
+2007-12-31,,0.034,0.005,,,,0.60,seed:UK:FTSE+Bloomberg,pre-GFC
+2008-12-31,,0.054,0.005,,,,0.60,seed:UK:FTSE+Bloomberg,GFC year-end (BoE+Bloomberg cross)
+2009-12-31,,0.034,0.005,,,,0.60,seed:UK:FTSE+Bloomberg,
+2010-12-31,,0.030,0.012,,,,0.60,seed:UK:FTSE+Bloomberg,buyback bucket steps up to 0.012
+2011-12-31,,0.037,0.012,,,,0.60,seed:UK:FTSE+Bloomberg,Eurozone crisis
+2012-12-31,,0.036,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,
+2013-12-31,,0.035,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,
+2014-12-31,,0.037,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,
+2015-12-31,,0.044,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,energy/mining drawdown
+2016-12-31,,0.037,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,Brexit vote year
+2017-12-31,,0.039,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,
+2018-12-31,,0.047,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,Q4 selloff
+2019-12-31,,0.044,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,
+2020-12-31,,0.037,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,COVID dividend cuts
+2021-12-31,,0.035,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,
+2022-12-31,,0.040,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,
+2023-12-31,,0.039,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,
+2024-12-31,,0.037,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,
+2025-12-31,,0.037,0.012,,,,0.60,seed:UK:FTSE+VUKE.L,placeholder; refine post-2025-Q4 close

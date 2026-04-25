@@ -5,14 +5,16 @@ Per-market dispatch:
 
   python seed_historical.py                          # US (default), Damodaran XLS
   python seed_historical.py --market US              # explicit US
-  python seed_historical.py --market UK              # UK from Yahoo + FRED, 1990+
+  python seed_historical.py --market UK              # UK from CSV + Yahoo + FRED
 
 US path: Damodaran's histimpl.xls (auto-downloaded if missing).
-UK path: FTSE 100 year-end levels (yfinance ^FTSE) + UK 10Y Gilt
-         year-end yields (FRED IRLTLT01GBM156N). Dividend yield, payout
-         ratio and growth use the v1 bootstrap defaults from
-         markets_config.MARKETS["UK"] — flagged in data_source so they
-         are distinguishable from live-fetched rows.
+UK path: data/seed/UK_historical.csv supplies hand-keyed annual
+         dividend_yield / buyback_yield / payout_ratio (BoE / Barclays /
+         FTSE Russell sources cited in the CSV header). index_level is
+         pulled from yfinance ^FTSE Dec close per row; rfr_rate from
+         FRED IRLTLT01GBM156N December observation. analyst_5yr_growth
+         held at MarketSpec default per Agent 2 §4 ("not seeded
+         historically"). See SHARED_NOTES.md Agent 3 §4 for schema.
 """
 import argparse
 import sys
@@ -207,52 +209,123 @@ def _fetch_fred_yearend_rates(series_id: str, start_year: int, end_year: int,
     return out
 
 
+UK_SEED_CSV = Path(__file__).parent / "data" / "seed" / "UK_historical.csv"
+
+
+def _load_uk_seed_csv(path: Path) -> pd.DataFrame:
+    """Read the UK seed CSV (skipping '#' header comments). Required column: date."""
+    if not path.exists():
+        raise FileNotFoundError(
+            f"UK seed CSV missing: {path}. See data/seed/UK_historical.csv "
+            "schema in SHARED_NOTES.md Agent 3 §4."
+        )
+    df = pd.read_csv(path, comment="#")
+    if "date" not in df.columns:
+        raise ValueError(f"{path}: missing required 'date' column")
+    df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+    return df
+
+
+def _csv_value(row: pd.Series, col: str):
+    """Return float(row[col]) or None if blank/NaN/missing column."""
+    if col not in row.index:
+        return None
+    v = row[col]
+    if pd.isna(v) or v == "" or v is None:
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def seed_uk(start_year: int = 1990, end_year: int | None = None,
-            verbose: bool = True) -> int:
+            verbose: bool = True, csv_path: Path | None = None) -> int:
     """
-    v1 UK bootstrap: FTSE 100 year-end + UK 10Y Gilt year-end.
-    Dividend yield, payout, growth use MarketSpec defaults.
+    Seed UK history from data/seed/UK_historical.csv (BoE / Barclays / FTSE
+    Russell sourced annual values for dividend_yield, buyback_yield,
+    payout_ratio). index_level filled from yfinance ^FTSE Dec close,
+    rfr_rate from FRED IRLTLT01GBM156N Dec observation.
+
+    See the CSV header for documented v1 shortfalls.
     """
     init_db()
     spec = get_market("UK")
     api_key = config.FRED_API_KEY
-    if not api_key:
-        raise RuntimeError(
-            "FRED_API_KEY not set. Add it to .env or export it before running."
-        )
+
+    csv_path = csv_path or UK_SEED_CSV
+    print(f"  Loading UK seed CSV: {csv_path}")
+    seed_df = _load_uk_seed_csv(csv_path)
 
     end_year = end_year or (date.today().year - 1)
+    seed_df = seed_df[
+        (pd.to_datetime(seed_df["date"]).dt.year >= start_year) &
+        (pd.to_datetime(seed_df["date"]).dt.year <= end_year)
+    ].copy()
+    if seed_df.empty:
+        print(f"  No CSV rows in range {start_year}–{end_year}; nothing to seed.")
+        return 0
 
     print(f"  Fetching ^FTSE year-end closes {start_year}–{end_year} ...")
     ftse = _fetch_ftse_yearend_closes(start_year, end_year)
 
-    print(f"  Fetching FRED {spec.fred_rfr_series} year-end (Dec) rates ...")
-    gilt = _fetch_fred_yearend_rates(spec.fred_rfr_series, start_year, end_year, api_key)
-
-    div_y    = 0.035                             # FTSE 100 long-run mean (bootstrap)
-    buyback  = spec.default_buyback_yield        # 0.012
-    growth   = spec.default_analyst_growth       # 0.06
-    payout   = spec.default_payout_ratio         # 0.60
-    src_tag  = "seed:UK:bootstrap"
+    if api_key:
+        print(f"  Fetching FRED {spec.fred_rfr_series} year-end (Dec) rates ...")
+        try:
+            gilt = _fetch_fred_yearend_rates(spec.fred_rfr_series, start_year,
+                                             end_year, api_key)
+        except Exception as e:
+            print(f"  FRED fetch failed ({e}); falling back to "
+                  f"MarketSpec.default_rfr_fallback={spec.default_rfr_fallback}")
+            gilt = {}
+    else:
+        print("  FRED_API_KEY not set; using MarketSpec.default_rfr_fallback "
+              f"({spec.default_rfr_fallback}) for all years (stale_flag=1).")
+        gilt = {}
 
     seeded = 0
     skipped: list[tuple[int, str]] = []
+    rfr_fallback_years: list[int] = []
 
-    print(f"\n  Seeding UK {start_year}–{end_year} (DDM, "
-          f"div_y={div_y:.2%}, buyback={buyback:.2%}, growth={growth:.2%}) ...")
+    print(f"\n  Seeding UK from CSV ({len(seed_df)} rows, DDM) ...")
 
-    for yr in range(start_year, end_year + 1):
-        dt = f"{yr}-12-31"
-        if yr not in ftse:
-            skipped.append((yr, "no ^FTSE Dec close"))
-            continue
-        if yr not in gilt:
-            skipped.append((yr, "no Gilt Dec value"))
-            continue
+    for _, row in seed_df.iterrows():
+        dt = row["date"]
+        yr = int(pd.Timestamp(dt).year)
 
-        index_level = ftse[yr]
-        rfr_rate = gilt[yr]
+        # index_level: prefer CSV → fallback to yfinance Dec close
+        index_level = _csv_value(row, "index_level")
+        if index_level is None:
+            if yr not in ftse:
+                skipped.append((yr, "no ^FTSE Dec close and no CSV index_level"))
+                continue
+            index_level = ftse[yr]
+
+        # rfr_rate: prefer CSV → FRED → MarketSpec default (stale)
+        rfr_rate = _csv_value(row, "rfr_rate")
+        if rfr_rate is None:
+            if yr in gilt:
+                rfr_rate = gilt[yr]
+            elif spec.default_rfr_fallback is not None:
+                rfr_rate = spec.default_rfr_fallback
+                rfr_fallback_years.append(yr)
+            else:
+                skipped.append((yr, "no rfr (FRED missing, no fallback)"))
+                continue
+
+        # CSV-supplied per-row inputs (with MarketSpec defaults if blank)
+        div_y    = _csv_value(row, "dividend_yield") or 0.035
+        buyback  = _csv_value(row, "buyback_yield")
+        if buyback is None:
+            buyback = spec.default_buyback_yield
+        growth   = _csv_value(row, "analyst_5yr_growth")
+        if growth is None:
+            growth = spec.default_analyst_growth
+        payout   = _csv_value(row, "payout_ratio") or spec.default_payout_ratio
+        trail_eps = _csv_value(row, "trailing_eps")  # may be None
+
         total_yield = div_y + buyback
+        src_tag = str(row.get("source", "seed:UK:csv")).strip() or "seed:UK:csv"
 
         upsert_inputs(
             dt=dt,
@@ -262,6 +335,7 @@ def seed_uk(start_year: int = 1990, end_year: int | None = None,
             growth=growth,
             rfr_rate=rfr_rate,
             source=src_tag,
+            trailing_eps=trail_eps,
             payout_ratio=payout,
             market="UK",
         )
@@ -291,13 +365,18 @@ def seed_uk(start_year: int = 1990, end_year: int | None = None,
             )
             seeded += 1
             if verbose:
+                tag = "fallback-rfr" if yr in rfr_fallback_years else ""
                 print(f"    {yr}: FTSE={index_level:>8.2f}  "
-                      f"Gilt={rfr_rate:>6.2%}  ERP={result.implied_erp:>6.2%}  "
-                      f"r={result.implied_r:>6.2%}")
+                      f"Gilt={rfr_rate:>6.2%}  divY={div_y:>5.2%}  "
+                      f"ERP={result.implied_erp:>6.2%}  "
+                      f"r={result.implied_r:>6.2%}  {tag}")
         except Exception as e:
             skipped.append((yr, f"solver: {e}"))
 
     print(f"\n  Done. Seeded: {seeded}  Skipped: {len(skipped)}")
+    if rfr_fallback_years:
+        print(f"  rfr fallback (MarketSpec.default_rfr_fallback={spec.default_rfr_fallback}): "
+              f"{len(rfr_fallback_years)} year(s) — {rfr_fallback_years}")
     if skipped and verbose:
         for yr, why in skipped:
             print(f"    skipped {yr}: {why}")
