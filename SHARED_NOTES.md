@@ -1231,4 +1231,60 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             Next session (Phase 2): confirm /erp-dashboard/src/ React source
             location, wire market-picker UI + historical band overlay for UK.
             Open (carried from earlier): React source location.
+
+2026-05-02  Phase 2 complete — PHASE 2 EXIT CRITERIA MET, ready for Phase 3.
+            Path B (inline patch) — React source NOT recovered, compiled bundle
+            in assets/ treated as read-only. The two-HTML fallback was NOT
+            needed: the inline fetch monkey-patch survives the bundle.
+            Pre-edit safety: ~/.erp_backup/erp_dashboard.html.pre2 and
+            ~/.erp_backup/assets.pre2/ snapshots taken before any edit.
+            Implementation: erp_dashboard.html grows from 532 B to ~6 kB via a
+            classic <script> in <head> (runs before the deferred module
+            script), which (a) wraps window.fetch so GETs to URLs containing
+            /api/ append ?market=<chosen> (idempotent on already-set market=)
+            and POSTs with JSON bodies merge "market" into the body, (b)
+            patches XMLHttpRequest.open/send with the same logic as a
+            belt-and-suspenders, (c) injects a top-strip <div> with a <select>
+            (US, UK enabled; EU/JP/KR/IN/TW/CN disabled with " (Phase 3+)"),
+            and (d) polls /api/latest after each load to render
+            "Source: <data_source> (<currency>)" in #erp-source-badge — the
+            Phase-1-deferred UI surfacing of data_source / quality_notes.
+            On <select> change the new value is written to
+            localStorage['erp_market'] and location.reload() repaints the React
+            tree.
+            Phase 2 exit criteria (Agent 4 §1) — all PASS:
+              [✓] Open localhost:5001/ → visible market <select>, default US.
+              [✓] Pick UK → 5/5 /api/* requests carry market=UK
+                  (/api/latest, /api/status, /api/latest?method=fcfe,
+                  /api/stats?method=fcfe, /api/history?method=fcfe);
+                  badge → "Source: fcfe (GBP)"; UK FCFE ERP=4.69% ∈ [4.0%, 6.5%].
+              [✓] Pick US → 5/5 /api/* requests carry market=US;
+                  badge → "Source: fcfe (USD)"; US FCFE ERP=6.80%
+                  (= end-of-Phase-1 value).
+              [✓] Both round-trips visibly under 2 s. No console errors.
+              [✓] Backend invariants preserved (Phase 1 contract):
+                  /api/latest (no market) ≡ /api/latest?market=US byte-identical;
+                  /api/history (no market) ≡ /api/history?market=US
+                  byte-identical (count=68 SP500 series).
+              [✓] Source badge renders for both markets.
+            Files touched: erp_dashboard.html (NEW patch), CHANGELOG.md
+            (v0.phase2 entry), SHARED_NOTES.md (this line).
+            Backups untouched. Compiled bundle in assets/ untouched.
+            Deferred items for Phase 3 (NOT blockers):
+              · location.reload() on switch is a ~200ms UX flash; cleanup
+                blocked on recovering /erp-dashboard/src/.
+              · EU/JP options to be enabled in the <select> when each market
+                lands in markets_config.py — flag for Phase 3 PR.
+              · Per-market data-quality tier badge (Phase 4 EM work) will
+                need richer styling than the single-line badge here.
+              · Damodaran ctryprem.html UK reconciliation still deferred
+                (Phase 5 hardening).
+            Recommend `git tag v0.phase2` after this commit.
+            Next session (Phase 3): add EU (STOXX 600) and JP (TOPIX with
+                ^N225 splice) entries to markets_config.py; seed EU from
+                1992, JP from 1985; flip EU + JP options in the dashboard
+                <select> from disabled to enabled.
+            Open: React source location (now NOT a Phase-2 blocker — Phase 2
+                shipped via inline patch — but still required to retire the
+                reload() flash and wire per-market chart styling).
 ```

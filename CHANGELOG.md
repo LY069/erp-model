@@ -9,6 +9,39 @@ the overall delivery plan.
 
 ## [Unreleased]
 
+## [v0.phase2] — 2026-05-02
+
+Frontend market switcher injected into the existing React bundle.
+The `/erp-dashboard/src/` source tree could not be located on the machine,
+so this phase is implemented as a non-invasive injection into
+`erp_dashboard.html` (compiled bundle in `assets/` is read-only).
+
+### Added
+- `erp_dashboard.html` — top-strip market `<select>` (US, UK enabled; EU/JP/KR/IN/TW/CN disabled with `(Phase 3+)` suffix), source badge, and inline classic-script monkey-patch installed before the deferred `<script type="module">` runs:
+  - `window.fetch` wrapped: GET/HEAD requests to any URL containing `/api/` get `?market=<chosen>` appended (idempotent — skipped if `market=` already present); POSTs with JSON bodies get `"market"` merged into the body.
+  - `XMLHttpRequest.prototype.open` and `.send` patched with the same logic as a belt-and-suspenders for axios/xhr.
+  - `localStorage['erp_market']` is the source of truth; defaults to `'US'`. On `<select>` change, the new value is stored and `location.reload()` repaints the React tree against the new market.
+  - `#erp-source-badge` polls `/api/latest` after each load and surfaces `data_source (currency)` plus `quality_notes` when present (Phase-1-deferred UI work).
+
+### Validation (Phase 2 exit criteria, all ✅)
+- `localhost:5001/` shows visible market `<select>`; default `US`.
+- Pick UK → 5/5 `/api/*` requests carry `market=UK` (`/api/latest`, `/api/status`, `/api/latest?method=fcfe`, `/api/stats?method=fcfe`, `/api/history?method=fcfe`); current-ERP card redraws to UK series; badge → `Source: fcfe (GBP)`. UK FCFE ERP=4.69% ∈ [4.0%, 6.5%] band.
+- Pick US → 5/5 `/api/*` requests carry `market=US`; chart redraws to 65yr US series (count=68); badge → `Source: fcfe (USD)`. US FCFE ERP=6.80% — identical to Phase 1.
+- Both round-trips < 2s. No console errors on either market.
+- Backend invariant preserved: `/api/latest` (no market) ≡ `/api/latest?market=US` byte-identical; `/api/history` (no market) ≡ `/api/history?market=US` byte-identical (count=68).
+
+### Files touched
+- `erp_dashboard.html` — `+~120 / -0` (style + inline script injected into `<head>`, root body unchanged).
+- `CHANGELOG.md`, `SHARED_NOTES.md` (status log only).
+
+### Pre-edit safety
+- `~/.erp_backup/erp_dashboard.html.pre2` and `~/.erp_backup/assets.pre2/` snapshots taken before edit. Compiled bundle in `assets/` not modified — recovery is `cp -r ~/.erp_backup/assets.pre2/* assets/`.
+
+### Documented Phase 3 risks
+- Each disabled `<option>` (EU/JP/KR/IN/TW/CN) must be enabled one at a time as the corresponding market lands in `markets_config.py`.
+- The `location.reload()` on switch is a UX wart (~200ms flash). Acceptable; cleanup blocked on recovering the React source.
+- Source badge currently only renders `data_source / currency / quality_notes`. EM data-quality tier badge (Phase 4) will need richer styling.
+
 ## [v0.phase1] — 2026-04-25
 
 UK end-to-end as the second market through the multi-market scaffold.
