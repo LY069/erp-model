@@ -21,10 +21,22 @@
       body { padding-top: 44px; }
     </style>
     <!--
+      Per-market display labels injected by server.py from
+      markets_config.MARKETS at request time. Single source of truth.
+      Adding a market in Phase 3/4 = filling display_index_name /
+      display_rfr_name / currency_symbol on its MarketSpec; nothing here
+      to edit. If the marker is not substituted (e.g. when serving the
+      file directly without Flask), the relabel below falls back to a
+      no-op and the page renders with the bundle's hardcoded US labels.
+    -->
+    <!-- __ERP_LABELS__ -->
+    <!--
       Phase 2 market-switcher injection.
       Installs fetch + XHR monkey-patches BEFORE the React bundle module loads,
       so every /api/* request the bundle issues carries the chosen market.
       Module scripts are deferred, so this classic script runs first.
+      Phase 2.1 adds DOM relabel + currency-symbol swap driven by
+      window.__ERP_LABELS__.
     -->
     <script>
       (function () {
@@ -106,6 +118,156 @@
           return _send.apply(this, arguments);
         };
 
+        // ── Per-market label rewrite (Phase 2.1) ───────────────────
+        // The compiled React bundle has US-specific strings hardcoded.
+        // We text-substitute them at the DOM level, anchored on whatever
+        // labels markets_config declared for US so this works for any
+        // future market without further code changes here.
+        var _RELABEL = { busy: false, reps: [], currency: null };
+
+        function getLabels() {
+          var tbl = window.__ERP_LABELS__ || {};
+          return tbl[getMarket()] || null;
+        }
+
+        function buildReps(labels) {
+          // Anchor on the US labels (what the bundle has hardcoded).
+          // Replacement order is longest-string-first so a longer pattern
+          // matches before a shorter one that's a substring of it.
+          var us = (window.__ERP_LABELS__ || {}).US;
+          if (!us || !labels) return [];
+          var reps = [];
+          var idxLong  = labels.indexName, idxShort = labels.indexShort;
+          var usIdxLong = us.indexName,    usIdxShort = us.indexShort;
+          if (idxLong && idxLong !== usIdxLong) {
+            reps.push([usIdxLong + ' Implied Equity Risk Premium',
+                       idxLong + ' Implied Equity Risk Premium']);
+            reps.push([usIdxLong + ' Level',  idxLong + ' Level']);
+            reps.push([usIdxLong + ' Used',   idxLong + ' Used']);
+            reps.push([usIdxLong,             idxLong]);
+          }
+          if (usIdxShort && idxShort && idxShort !== usIdxShort) {
+            // 'S&P aggregate' (sub-label) uses the brand short
+            reps.push([usIdxShort + ' aggregate', idxShort + ' aggregate']);
+            // bare brand short — table headers, scenario presets like
+            // '+7% S&P, +8% EPS, rates flat' → '+7% FTSE, ...'
+            reps.push([usIdxShort, idxShort]);
+          }
+          var rfrLong  = labels.rfrLabel, rfrShort = labels.rfrShort;
+          var usRfrLong = us.rfrLabel,    usRfrShort = us.rfrShort;
+          if (rfrLong && usRfrLong && rfrLong !== usRfrLong) {
+            // Long forms — chart name 'T-Bond Rate (%)', input 'T-Bond Rate %'
+            reps.push([usRfrLong + ' (%)', rfrLong + ' (%)']);
+            reps.push([usRfrLong + ' %',   rfrLong + ' %']);
+            reps.push([usRfrLong,          rfrLong]);
+          }
+          if (usRfrShort && rfrShort && rfrShort !== usRfrShort) {
+            // Bare short — column header 'T-Bond', formula 'ERP + T-Bond'
+            reps.push([usRfrShort, rfrShort]);
+            // The bundle also has a title-case-with-lowercase-tail variant
+            // in 'ERP + T-bond'. Capital first letter, rest lowercased.
+            var usTitleTail = usRfrShort.length
+              ? usRfrShort[0] + usRfrShort.slice(1).toLowerCase()
+              : '';
+            if (usTitleTail && usTitleTail !== usRfrShort) {
+              // Replacement keeps the per-market short's natural casing
+              // ('Gilt', 'Bund', 'JGB') — reading 'ERP + Gilt' / 'ERP + JGB'.
+              reps.push([usTitleTail, rfrShort]);
+            }
+            // All-lowercase fallback in case any future market label uses it.
+            var usAllLc = usRfrShort.toLowerCase();
+            if (usAllLc !== usRfrShort && usAllLc !== usTitleTail) {
+              reps.push([usAllLc, rfrShort.toLowerCase()]);
+            }
+          }
+          return reps;
+        }
+
+        function _shouldSkipNode(n) {
+          if (!n.parentNode) return true;
+          var p = n.parentNode;
+          while (p && p !== document.body && p !== document.documentElement) {
+            if (p.id === 'erp-market-strip') return true;
+            var t = p.nodeName;
+            if (t === 'SCRIPT' || t === 'STYLE') return true;
+            p = p.parentNode;
+          }
+          return false;
+        }
+
+        function relabelTree(root) {
+          if (!root) return;
+          if (!_RELABEL.reps.length
+              && (!_RELABEL.currency || _RELABEL.currency === '$')) return;
+          if (_RELABEL.busy) return;
+          _RELABEL.busy = true;
+          try {
+            // root may itself be a text node or an element
+            var nodes = [];
+            if (root.nodeType === 3) {
+              nodes.push(root);
+            } else if (root.nodeType === 1) {
+              var it = document.createNodeIterator(root, NodeFilter.SHOW_TEXT);
+              var n;
+              while ((n = it.nextNode())) nodes.push(n);
+            }
+            var curRe = (_RELABEL.currency && _RELABEL.currency !== '$')
+              ? /(^|[^A-Za-z0-9])\$(?=\d|\s|$)/g
+              : null;
+            for (var i = 0; i < nodes.length; i++) {
+              var node = nodes[i];
+              if (_shouldSkipNode(node)) continue;
+              var t = node.nodeValue;
+              if (!t) continue;
+              var changed = false;
+              for (var j = 0; j < _RELABEL.reps.length; j++) {
+                var pair = _RELABEL.reps[j];
+                if (t.indexOf(pair[0]) !== -1) {
+                  t = t.split(pair[0]).join(pair[1]);
+                  changed = true;
+                }
+              }
+              if (curRe && curRe.test(t)) {
+                curRe.lastIndex = 0;
+                t = t.replace(curRe, '$1' + _RELABEL.currency);
+                changed = true;
+              }
+              if (changed) node.nodeValue = t;
+            }
+          } finally {
+            _RELABEL.busy = false;
+          }
+        }
+
+        function initRelabel() {
+          var labels = getLabels();
+          _RELABEL.reps     = buildReps(labels);
+          _RELABEL.currency = labels ? labels.currencySymbol : null;
+          // Identity case: nothing to do.
+          if (!_RELABEL.reps.length
+              && (!_RELABEL.currency || _RELABEL.currency === '$')) {
+            return;
+          }
+          relabelTree(document.body);
+          // Re-apply on every React re-render (chart redraws, scenario edits, …).
+          var mo = new MutationObserver(function (muts) {
+            if (_RELABEL.busy) return;
+            for (var i = 0; i < muts.length; i++) {
+              var m = muts[i];
+              if (m.type === 'characterData') {
+                relabelTree(m.target);
+              } else if (m.addedNodes && m.addedNodes.length) {
+                for (var k = 0; k < m.addedNodes.length; k++) {
+                  relabelTree(m.addedNodes[k]);
+                }
+              }
+            }
+          });
+          mo.observe(document.body, {
+            childList: true, subtree: true, characterData: true
+          });
+        }
+
         function buildStrip() {
           if (document.getElementById('erp-market-strip')) return;
           var strip = document.createElement('div');
@@ -131,6 +293,7 @@
             location.reload();
           });
           refreshSourceBadge();
+          initRelabel();
         }
 
         function refreshSourceBadge() {

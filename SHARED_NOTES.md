@@ -1287,4 +1287,55 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             Open: React source location (now NOT a Phase-2 blocker — Phase 2
                 shipped via inline patch — but still required to retire the
                 reload() flash and wire per-market chart styling).
+
+2026-05-06  Phase 2.1 — per-market UI label rewrite. Bug found post-tag:
+            picking UK still showed 'S&P 500' / 'T-Bond Rate' / 'T-bond'
+            because the compiled bundle has US strings hardcoded and was
+            built before market awareness existed. Fix was a DOM relabel
+            driven by a single source of truth in markets_config.MARKETS,
+            so future markets only need their MarketSpec entry filled.
+            Approach (single source of truth):
+              · markets_config.MarketSpec gains five display fields:
+                display_index_name, display_index_short, display_rfr_name,
+                display_rfr_short, currency_symbol. US + UK populated.
+              · server.py serve_dashboard() rewritten to read
+                erp_dashboard.html, substitute the marker
+                <!-- __ERP_LABELS__ --> with a <script> block emitting
+                window.__ERP_LABELS__ from MARKETS. Single payload, all
+                markets, available before the React module parses.
+              · erp_dashboard.html extends the existing inline patch with
+                buildReps() (longest-string-first replacement list anchored
+                on US labels), relabelTree() (text-node walker that skips
+                #erp-market-strip and SCRIPT/STYLE), and a MutationObserver
+                that re-applies on every React re-render. US = strict
+                identity transform (no replacements fire) → Phase 1 byte
+                contract preserved.
+            Replacement variants discovered during browser smoke test:
+              · 'S&P 500 Implied Equity Risk Premium', 'S&P 500 Level',
+                'S&P 500 Used', 'S&P 500', 'S&P aggregate', 'S&P'
+              · 'T-Bond Rate (%)', 'T-Bond Rate %', 'T-Bond Rate', 'T-Bond',
+                'T-bond' (lowercase variant in formula 'ERP + T-bond').
+              All handled.
+            Validation (browser MCP):
+              [✓] US: S&P long+short+aggregate visible; T-Bond + T-bond
+                  visible; no FTSE leakage; badge 'Source: fcfe (USD)'.
+              [✓] UK: every S&P / T-Bond / T-bond variant replaced;
+                  FTSE 100, FTSE, FTSE aggregate, Gilt all visible;
+                  badge 'Source: fcfe (GBP)'.
+              [✓] /api/latest (no market) ≡ /api/latest?market=US
+                  byte-identical; /api/history same. Phase 1 contract
+                  intact.
+              [✓] No console errors on either market.
+            Future-market contract: Phase 3 / 4 contributors fill the five
+            display fields on each new MarketSpec entry; nothing in the
+            HTML or server has to be touched. Verified mechanism by
+            symmetry: US-identity and UK-full-relabel both flow through
+            the same parametrised code path.
+            Files touched: markets_config.py, server.py, erp_dashboard.html,
+            CHANGELOG.md, SHARED_NOTES.md (this line).
+            Compiled bundle in assets/ untouched.
+            Recommend `git tag v0.phase2.1` after this commit, then proceed
+            to Phase 3 (EU + JP) — the relabel will pick them up
+            automatically once their MarketSpec entries land.
+            Open (carried): React source location.
 ```

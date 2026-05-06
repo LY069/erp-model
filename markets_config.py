@@ -33,6 +33,22 @@ class MarketSpec:
     rfr_max_stale_days: int = 7
     data_quality: str = "full"
     notes: str = ""
+    # Display fields used by the dashboard's per-market label rewrite
+    # (Phase 2.1). The bundle in assets/ has US-specific strings hardcoded;
+    # these supply the per-market replacements. New markets added in
+    # Phases 3/4 only need to fill these to get correct UI labels.
+    #
+    # Why two index forms and two rfr forms: the bundle uses both a long
+    # form (page heading, card label, input label) and a short form
+    # (table column header, scenario preset, formula text). Examples in
+    # the compiled bundle: "S&P 500 Implied Equity Risk Premium",
+    # "S&P 500 Level", "S&P aggregate", and bare "S&P" / "T-Bond" /
+    # "T-bond" (lowercase, in `ERP + T-bond`).
+    display_index_name:  str = ""    # long, e.g. "S&P 500", "FTSE 100"
+    display_index_short: str = ""    # short, e.g. "S&P", "FTSE"; auto-default = first word of display_index_name
+    display_rfr_name:    str = ""    # long,  e.g. "T-Bond Rate", "10Y Gilt Yield"
+    display_rfr_short:   str = ""    # short, e.g. "T-Bond", "Gilt"
+    currency_symbol:     str = "$"   # e.g. "$", "£", "€", "¥", "₩", "₹", "NT$"
 
 
 MARKETS: dict[str, MarketSpec] = {
@@ -57,6 +73,11 @@ MARKETS: dict[str, MarketSpec] = {
         data_quality="full",
         notes="Matches Damodaran Jan 2026 snapshot (ERP=4.23%). "
               "Values mirror config.py defaults so Phase 0 is behaviour-neutral.",
+        display_index_name="S&P 500",
+        display_index_short="S&P",
+        display_rfr_name="T-Bond Rate",
+        display_rfr_short="T-Bond",
+        currency_symbol="$",
     ),
     "UK": MarketSpec(
         code="UK",
@@ -80,6 +101,11 @@ MARKETS: dict[str, MarketSpec] = {
         data_quality="full",
         notes="FTSE 100 + VUKE.L (Vanguard FTSE 100 UCITS) for div yield. "
               "FRED IRLTLT01GBM156N = UK 10Y Gilt. GBP local currency.",
+        display_index_name="FTSE 100",
+        display_index_short="FTSE",
+        display_rfr_name="10Y Gilt Yield",
+        display_rfr_short="Gilt",
+        currency_symbol="£",
     ),
 }
 

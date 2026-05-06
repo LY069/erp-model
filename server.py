@@ -12,6 +12,7 @@ Then open http://localhost:5001 in your browser.
 
 import sys
 import os
+import json
 import traceback
 from datetime import date
 from pathlib import Path
@@ -26,7 +27,7 @@ os.chdir(THIS_DIR)
 sys.path.insert(0, str(THIS_DIR))
 
 from config import OUTPUT_DIR, DEFAULT_PAYOUT_RATIO
-from markets_config import get_market
+from markets_config import MARKETS, get_market
 from database import (
     init_db, upsert_inputs, upsert_computation, upsert_forecast, upsert_breakeven,
     get_latest, get_history, get_forecasts, get_latest_breakeven, get_log, get_stats
@@ -68,12 +69,46 @@ def _nocache(resp):
     resp.headers["Expires"] = "0"
     return resp
 
+LABEL_MARKER = "<!-- __ERP_LABELS__ -->"
+
+
+def _build_label_payload() -> str:
+    """Render the per-market display labels as an inline <script> block.
+
+    Single source of truth = `markets_config.MARKETS`. Adding a market in
+    Phases 3/4 means filling display_index_name / display_rfr_name /
+    currency_symbol on its MarketSpec — nothing else to touch.
+    """
+    def _short_from(long: str) -> str:
+        # Default brand short = first whitespace-delimited token of the long name.
+        # E.g. "S&P 500" → "S&P", "STOXX 600" → "STOXX", "MSCI China" → "MSCI".
+        return long.split(" ", 1)[0] if long else ""
+
+    payload = {
+        code: {
+            "indexName":      m.display_index_name or code,
+            "indexShort":     m.display_index_short or _short_from(m.display_index_name) or code,
+            "rfrLabel":       m.display_rfr_name   or "",
+            "rfrShort":       m.display_rfr_short  or "",
+            "currencySymbol": m.currency_symbol,
+            "currencyCode":   m.currency,
+            "name":           m.name,
+        }
+        for code, m in MARKETS.items()
+    }
+    return f"<script>window.__ERP_LABELS__ = {json.dumps(payload)};</script>"
+
+
 @app.get("/")
 def serve_dashboard():
-    """Serve the dashboard HTML."""
-    if DASHBOARD_FILE.exists():
-        return _nocache(make_response(send_file(str(DASHBOARD_FILE), mimetype="text/html")))
-    return "<h1>erp_dashboard.html not found</h1>", 404
+    """Serve the dashboard HTML with __ERP_LABELS__ injected from MARKETS."""
+    if not DASHBOARD_FILE.exists():
+        return "<h1>erp_dashboard.html not found</h1>", 404
+    html = DASHBOARD_FILE.read_text(encoding="utf-8")
+    html = html.replace(LABEL_MARKER, _build_label_payload(), 1)
+    resp = make_response(html)
+    resp.mimetype = "text/html"
+    return _nocache(resp)
 
 @app.get("/assets/<path:filename>")
 def serve_asset(filename):

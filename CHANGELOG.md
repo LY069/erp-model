@@ -9,6 +9,59 @@ the overall delivery plan.
 
 ## [Unreleased]
 
+## [v0.phase2.1] — 2026-05-06
+
+Per-market UI label rewrite. Phase 2 routed `/api/*` calls correctly to the
+chosen market, but the compiled React bundle had US-specific strings baked in
+("S&P 500", "T-Bond Rate", etc.), so picking UK still showed the SP500 chart
+title. The bundle is read-only (no source tree). Fix is a DOM relabel driven
+by a single source of truth in `markets_config.MARKETS`.
+
+### Added
+- `markets_config.MarketSpec` gains four display fields:
+  `display_index_name` (long, e.g. "FTSE 100"), `display_index_short`
+  (e.g. "FTSE"), `display_rfr_name` (long, e.g. "10Y Gilt Yield"),
+  `display_rfr_short` (e.g. "Gilt"), and `currency_symbol`
+  (e.g. "£"). Defaults are safe so existing entries stay valid.
+  All five are populated for US and UK; future markets fill them when
+  their `MarketSpec` entries land.
+- `server.py` `serve_dashboard()` rewritten to inject
+  `<script>window.__ERP_LABELS__ = {...};</script>` at the
+  `<!-- __ERP_LABELS__ -->` placeholder. Payload is built from
+  `MARKETS` so the dashboard never duplicates label data.
+- `erp_dashboard.html` extends the inline patch with `buildReps()` +
+  `relabelTree()` + `MutationObserver` so the bundle's hardcoded
+  US strings get text-substituted for any non-US market on every
+  React re-render. US is the strict identity transform (no replacements
+  fire), preserving the Phase 1 byte contract.
+
+### Validation (all ✅)
+- `/api/latest` (no market) ≡ `/api/latest?market=US` byte-identical.
+- `/api/history` (no market) ≡ `/api/history?market=US` byte-identical.
+- US selected: S&P 500 long + short + aggregate visible, T-Bond + T-bond
+  visible, no FTSE leakage. Badge: "Source: fcfe (USD)".
+- UK selected: every variant ("S&P 500", "S&P", "S&P aggregate",
+  "T-Bond Rate", "T-Bond", "T-bond") replaced; FTSE 100, FTSE,
+  FTSE aggregate, Gilt all visible. Badge: "Source: fcfe (GBP)".
+- No console errors on either market. Switching markets stays under 2 s.
+
+### Future-market contract
+Adding a market in Phase 3 / 4 = appending a `MarketSpec` entry with
+`display_index_name`, `display_index_short`, `display_rfr_name`,
+`display_rfr_short`, `currency_symbol` populated. No HTML or relabel-code
+edits required.
+
+### Files touched
+- `markets_config.py` — `+5` MarketSpec fields, populated for US+UK.
+- `server.py` — `serve_dashboard()` rewritten; new `_build_label_payload()`.
+- `erp_dashboard.html` — `<!-- __ERP_LABELS__ -->` placeholder; `+~120 lines`
+  in inline script for relabel + MutationObserver.
+- `CHANGELOG.md`, `SHARED_NOTES.md` (status log only).
+
+### Compiled bundle untouched
+`assets/index-PEBk7cqj.js` not modified. Recovery still
+`cp -r ~/.erp_backup/assets.pre2/* assets/`.
+
 ## [v0.phase2] — 2026-05-02
 
 Frontend market switcher injected into the existing React bundle.
