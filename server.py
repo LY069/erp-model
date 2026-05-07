@@ -134,6 +134,36 @@ def _market_currency(market: str) -> str:
     return get_market(market).currency
 
 
+# Legacy field aliases for the compiled React bundle.
+#
+# The bundle in assets/index-*.js was compiled before Phase 1's market
+# generalisation, when the API used US-specific field names. Source isn't in
+# this repo, so we can't rebuild it; instead we mirror the new canonical names
+# under their legacy aliases on the way out. Keep this as long as the bundle
+# is the one we're shipping. If/when the bundle is rebuilt against the new
+# names, this dict can shrink to {} and the helper becomes a no-op.
+#
+# Each canonical field maps to a list of legacy names because the bundle
+# inconsistently reads the rfr under three different keys depending on the
+# page (dashboard card → tbond_10yr_rate; breakeven/history → tbond_rate;
+# chart series → tbond). Without all three, only some surfaces render.
+LEGACY_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
+    # canonical (Phase 1+)  →  legacy names expected by the compiled bundle
+    "index_level":          ("sp500_level",),
+    "rfr_rate":             ("tbond_rate", "tbond_10yr_rate", "tbond"),
+}
+
+
+def _add_legacy_aliases(row: dict) -> dict:
+    """Augment a response row with bundle-compatible aliases. Mutates and returns."""
+    for canonical, legacies in LEGACY_FIELD_ALIASES.items():
+        if canonical in row:
+            for legacy in legacies:
+                if legacy not in row:
+                    row[legacy] = row[canonical]
+    return row
+
+
 # ── Routes ─────────────────────────────────────────────────────────
 
 @app.get("/api/status")
@@ -152,6 +182,7 @@ def latest():
         return _err("No data in database. Run /api/update first.", 404)
     data = dict(row)
     data["currency"] = _market_currency(market)
+    _add_legacy_aliases(data)
     return _ok({"data": data})
 
 
@@ -166,7 +197,8 @@ def history():
     if df.empty:
         return _ok({"data": [], "count": 0})
     df["date"] = df["date"].astype(str)
-    return _ok({"data": df.to_dict(orient="records"), "count": len(df)})
+    records = [_add_legacy_aliases(r) for r in df.to_dict(orient="records")]
+    return _ok({"data": records, "count": len(records)})
 
 
 @app.get("/api/stats")
@@ -294,7 +326,7 @@ def update():
     )
 
     return _ok({
-        "inputs": inputs,
+        "inputs": _add_legacy_aliases(dict(inputs)),
         "result": {
             "date":               result.date,
             "method":             result.method,
