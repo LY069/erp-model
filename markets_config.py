@@ -163,7 +163,10 @@ MARKETS: dict[str, MarketSpec] = {
         earliest_seed_date="1985-01-01",
         rfr_max_stale_days=7,
         data_quality="full",
-        notes="TOPIX (^TOPX primary; ^N225 fallback per Agent 2 §1). JPY. "
+        notes="TOPIX ERP. Live data via JP override (data_sources/overrides/jp.py): "
+              "1306.T (NEXT FUNDS TOPIX ETF, Nomura) for index level + dividend yield; "
+              "^N225 last-resort fallback (scale cancels in DDM). "
+              "Replaces FX-distorted EWJ for div yield (Phase 3.1). "
               "JGB rfr from FRED IRLTLT01JPM156N. Terminal-g floor 0.5% (Agent 2 §6a).",
         display_index_name="TOPIX",
         display_index_short="TOPIX",

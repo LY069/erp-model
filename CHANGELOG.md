@@ -9,6 +9,65 @@ the overall delivery plan.
 
 ## [Unreleased]
 
+## [v0.phase3.1] — 2026-05-07
+
+JP data-source upgrade. Phase 3 documented two known JP data-quality holes;
+this release fixes both with a single ticker substitution: `1306.T`
+(NEXT FUNDS TOPIX ETF, Nomura — JPY 30tn AUM, JPY-native, tracking error
+<0.1% pa). The change is wired through a new per-market override module
+`data_sources/overrides/jp.py`, matching the architecture the
+`data_sources/yahoo_fred.py` docstring already anticipated.
+
+### Added
+- `data_sources/overrides/__init__.py` — package marker.
+- `data_sources/overrides/jp.py` — `JPDataSource(YahooFredDataSource)` with
+  `fetch_index_level` (chain: 1306.T → 1308.T → ^N225) and
+  `fetch_dividend_yield` (1306.T `info.dividendYield`, falling back to the
+  parent class). Live-tested May 2026: 1306.T returns JPY 408 (clean ETF
+  print) and `info.dividendYield` = 0.0187 (1.87%, JPY-native).
+
+### Changed
+- `data_sources/yahoo_fred.py` — `fetch_index_level` no longer carries an
+  inline JP `^N225` fallback (now isolated in the override). `get_data_source`
+  factory dispatches `market == "JP"` to `JPDataSource`; all other markets
+  continue to use the generic `YahooFredDataSource` unchanged.
+- `seed_historical.py` — JP yearend-close fetcher now tries `1306.T` first
+  for years 2008+ (TOPIX ETF era) before falling back to `^N225`. CSV
+  pre-fills (1985–1999) and N225 fallback (2000–2007) are unchanged.
+- `markets_config.py` — JP `MarketSpec.notes` updated to describe the new
+  source chain. `yahoo_index` stays `"^TOPX"` as the canonical TOPIX label;
+  the override owns substitution policy.
+
+### Validation
+- JP override smoke test: `JPDataSource.fetch_index_level()` →
+  `yahoo:1306.T`, value 408.5 (ETF scale; cancels in DDM). ✓
+- JP `fetch_dividend_yield()` → 1.87% from `1306.T.info` (vs. EWJ's 0.79%). ✓
+- JP live ERP unchanged at 4.93% (FCFE method is P/E-based, so swapping
+  index source `^N225 → 1306.T` does not move ERP — same trailing P/E). ✓
+- JP re-seeded 41/41 rows; 2008–2025 ERPs in [1.97%, 4.23%] range. ✓
+- US `/api/latest` byte-identical with and without `?market=US`. ✓
+- UK live ERP 4.67% (unchanged from Phase 3). ✓
+- EU live ERP 6.82% (intraday move from 6.89%; not a regression). ✓
+- Dispatcher confirmed: only JP routes to `JPDataSource`. ✓
+- All 4 markets in `__ERP_LABELS__`. ✓
+
+### Why FCFE ERP didn't move (despite better data)
+FCFE base CF = `trailing_eps × payout`, where `trailing_eps` is derived as
+`EWJ.trailingEps × (index_level / EWJ.price)`. The ratio
+`base_cf / index_level` collapses to `EWJ_eps × payout / EWJ_price`,
+i.e., EWJ's P/E. Swapping `^N225` → `1306.T` for index level only changes
+the absolute scale, not the P/E ratio that drives the FCFE solver. The
+real win is the **dashboard display**: dividend yield now reads 1.87%
+(correct) instead of 0.79% (FX-distorted), and the source labels say
+`yahoo:1306.T` (TOPIX) instead of `yahoo:^N225` (Nikkei).
+
+### Decisions deferred to Phase 5
+- JPX official monthly xlsx (TSE Prime aggregate yield) — not justified
+  while 1306.T tracks it tightly between monthly refreshes.
+- Backfilling 2000–2007 TOPIX levels from a one-time hand-keyed source.
+- The persistent FRED SSL cert error on this machine (affects EU Bund and
+  JP JGB live rfr) — environmental, unrelated to the JP source upgrade.
+
 ## [v0.phase3] — 2026-05-06
 
 Developed-market tier: Europe (STOXX 600) and Japan (TOPIX) added as live

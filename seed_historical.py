@@ -253,7 +253,7 @@ def seed_csv_market(
 
     Per-row resolution order:
       index_level   : CSV pre-filled → yfinance spec.yahoo_index Dec close
-                      (JP: ^TOPX sparse years supplemented by ^N225)
+                      (JP: ^TOPX dead → 1306.T → ^N225 last-resort)
       rfr_rate      : CSV pre-filled → FRED spec.fred_rfr_series Dec obs
                       → spec.default_rfr_fallback (stale_flag implicit)
       div_yield     : CSV → spec.default_payout_ratio * 0.05 as last resort
@@ -287,13 +287,22 @@ def seed_csv_market(
     print(f"  Fetching {spec.yahoo_index} year-end closes {_start}–{_end} ...")
     index_closes = _fetch_yearend_closes(spec.yahoo_index, _start, _end)
 
-    # JP fallback: ^TOPX history is spotty for early years; supplement with ^N225
-    if market_code == "JP" and len(index_closes) < (_end - _start) // 2:
-        print("  ^TOPX data sparse — supplementing missing years from ^N225 ...")
-        n225 = _fetch_yearend_closes("^N225", _start, _end)
-        for yr, val in n225.items():
-            if yr not in index_closes:
-                index_closes[yr] = val
+    # JP source preference (Phase 3.1): ^TOPX is dead on yfinance.
+    #   1) 1306.T (NEXT FUNDS TOPIX ETF, JPY-native, history from 2008)
+    #   2) ^N225 last-resort (scale cancels in DDM — ERP unaffected)
+    if market_code == "JP":
+        if len(index_closes) < (_end - _start) // 2:
+            print("  ^TOPX sparse — supplementing year-end closes from 1306.T ...")
+            topix_etf = _fetch_yearend_closes("1306.T", _start, _end)
+            for yr, val in topix_etf.items():
+                if yr not in index_closes:
+                    index_closes[yr] = val
+        if len(index_closes) < (_end - _start) // 2:
+            print("  Still sparse — last-resort ^N225 supplement ...")
+            n225 = _fetch_yearend_closes("^N225", _start, _end)
+            for yr, val in n225.items():
+                if yr not in index_closes:
+                    index_closes[yr] = val
 
     if api_key:
         print(f"  Fetching FRED {spec.fred_rfr_series} year-end (Dec) rates ...")
@@ -433,7 +442,9 @@ def seed_eu(start_year: int = 1998, end_year: int | None = None,
 def seed_jp(start_year: int = 1985, end_year: int | None = None,
             verbose: bool = True) -> int:
     """Seed JP (TOPIX) from data/seed/JP_historical.csv.
-    ^TOPX is supplemented by ^N225 for years with sparse yfinance coverage.
+    Yahoo's ^TOPX is dead; the seeder tries 1306.T (Nomura TOPIX ETF) first
+    and falls back to ^N225 only as a last-resort circuit-breaker
+    (scale cancels in the DDM solver — ERP unaffected).
     Terminal-g floor max(rfr, 0.5%) applied per Agent 2 §6a.
     """
     return seed_csv_market("JP", start_year=start_year, end_year=end_year,

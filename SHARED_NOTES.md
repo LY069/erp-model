@@ -1382,4 +1382,49 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             Open (carried from Phase 3): FRED SSL cert on this machine (affects
               EU Bund and JP JGB live rfr); EWJ yield vs actual TOPIX yield;
               React source location.
+
+2026-05-07  Phase 3.1 — JP TOPIX data source upgrade.
+            Problem: Phase 3 left two known JP holes —
+              · ^TOPX dead on yfinance → live JP used ^N225 (Nikkei) prices
+              · EWJ div yield 0.79% (FX-distorted) vs actual TOPIX ~2.2%
+            Fix: single ticker substitution — 1306.T (NEXT FUNDS TOPIX ETF,
+              Nomura, JPY 30tn AUM, JPY-native, tracking error <0.1%).
+            Architecture: created the data_sources/overrides/ directory the
+              yahoo_fred.py docstring already anticipated. JP-specific logic
+              now lives in data_sources/overrides/jp.py:JPDataSource
+              (subclass of YahooFredDataSource) with fetch_index_level
+              chain (1306.T → 1308.T → ^N225) and fetch_dividend_yield via
+              1306.T.info.dividendYield. get_data_source() factory dispatches
+              JP only; US/UK/EU unchanged.
+            Decision points (asked + answered):
+              · MSCI Japan tier: SKIPPED. Tokyo-listed 1329.T and 2521.T have
+                been rebranded away from MSCI; only working source is EWJ
+                (the very ticker being replaced).
+              · Code layout: override module (architecturally aligned per
+                yahoo_fred.py docstring), not more inline JP branches.
+            Validation:
+              [✓] JP override smoke: yahoo:1306.T (408.5), divY 1.87%.
+              [✓] Dispatcher: only JP → JPDataSource; US/UK/EU → generic.
+              [✓] Re-seeded JP 41/41 rows; 2008+ now uses TOPIX-scale
+                  1306.T values; pre-2008 unchanged (CSV + N225 fallback).
+              [✓] US /api/latest byte-identical (Phase 1 contract).
+              [✓] UK live ERP 4.67% unchanged; EU 6.82% (intraday noise).
+              [✗] JP live ERP unchanged at 4.93% — explained: FCFE base CF
+                  is trailing_eps × payout, derived as EWJ.trailingEps ×
+                  (index/EWJ_price). The index_level/trailing_eps ratio
+                  collapses to EWJ's trailing P/E, which is invariant to
+                  whether index_level comes from ^N225 or 1306.T. The user-
+                  visible win is the dashboard display: divY now reads 1.87%
+                  (correct) and source label is yahoo:1306.T (TOPIX).
+            Files touched: data_sources/overrides/__init__.py,
+              data_sources/overrides/jp.py, data_sources/yahoo_fred.py,
+              seed_historical.py, markets_config.py, CHANGELOG.md,
+              SHARED_NOTES.md (this line).
+            Recommend `git tag v0.phase3.1` after this commit.
+            Carried open issues:
+              · FRED SSL cert (environmental; both EU Bund and JP JGB live
+                rfr fall back to defaults).
+              · 2000–2007 JP index_level still uses ^N225 scale (no free
+                TOPIX source for that span; scale-invariant for ERP).
+              · React source location (cosmetic — no Phase 4 blocker).
 ```

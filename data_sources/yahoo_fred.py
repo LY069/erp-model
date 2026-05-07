@@ -48,45 +48,25 @@ class YahooFredDataSource:
             return FetchResult(value=value, source=f"yahoo:{self.spec.yahoo_index}",
                                fetched_at=_now())
 
-        def _fetch_hist(sym: str) -> pd.DataFrame:
-            t = yf.Ticker(sym)
-            if as_of is not None:
-                target = pd.Timestamp(as_of)
-                start = target - timedelta(days=10)
-                return t.history(
-                    start=start.strftime("%Y-%m-%d"),
-                    end=(target + timedelta(days=1)).strftime("%Y-%m-%d"),
-                )
-            else:
-                return t.history(period="5d")
-
-        hist = _fetch_hist(self.spec.yahoo_index)
-
-        # JP-specific fallback: ^TOPX is unavailable on yfinance; use ^N225.
-        # Index level cancels in the DDM/FCFE solver so the scale difference
-        # does not affect the implied ERP (Agent 2 §1 / Phase 3 note).
-        fallback_sym = None
-        if hist.empty and self.market == "JP":
-            fallback_sym = "^N225"
-            warnings.warn(
-                f"{self.spec.yahoo_index} unavailable; falling back to {fallback_sym} "
-                f"for JP index level (level cancels in DDM — ERP unaffected)"
+        ticker = yf.Ticker(self.spec.yahoo_index)
+        if as_of is not None:
+            target = pd.Timestamp(as_of)
+            start = target - timedelta(days=10)
+            hist = ticker.history(
+                start=start.strftime("%Y-%m-%d"),
+                end=(target + timedelta(days=1)).strftime("%Y-%m-%d"),
             )
-            hist = _fetch_hist(fallback_sym)
-
+        else:
+            hist = ticker.history(period="5d")
         if hist.empty:
             raise ValueError(
                 f"No {self.spec.yahoo_index} data found"
                 + (f" near {as_of}" if as_of else "")
             )
-        used_sym = fallback_sym or self.spec.yahoo_index
         return FetchResult(
             value=float(hist["Close"].iloc[-1]),
-            source=f"yahoo:{used_sym}",
+            source=f"yahoo:{self.spec.yahoo_index}",
             fetched_at=_now(),
-            is_fallback=(fallback_sym is not None),
-            note=(f"^TOPX unavailable; used {fallback_sym} (scale-invariant for ERP)"
-                  if fallback_sym else None),
         )
 
     # ── rfr ────────────────────────────────────────────────────────
@@ -313,5 +293,14 @@ class YahooFredDataSource:
 
 
 def get_data_source(market: str) -> YahooFredDataSource:
-    """Factory: return a configured DataSource for the given market code."""
-    return YahooFredDataSource(get_market(market))
+    """Factory: return a configured DataSource for the given market code.
+
+    Most markets use the generic YahooFredDataSource. Markets that need
+    source-specific overrides (Phase 3.1: JP) get a subclass from
+    `data_sources.overrides`.
+    """
+    spec = get_market(market)
+    if market == "JP":
+        from data_sources.overrides.jp import JPDataSource
+        return JPDataSource(spec)
+    return YahooFredDataSource(spec)
