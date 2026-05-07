@@ -304,7 +304,7 @@ def seed_csv_market(
                 if yr not in index_closes:
                     index_closes[yr] = val
 
-    if api_key:
+    if api_key and spec.fred_rfr_series:
         print(f"  Fetching FRED {spec.fred_rfr_series} year-end (Dec) rates ...")
         try:
             rfr_map = _fetch_fred_yearend_rates(spec.fred_rfr_series, _start, _end, api_key)
@@ -312,6 +312,12 @@ def seed_csv_market(
             print(f"  FRED fetch failed ({e}); falling back to "
                   f"MarketSpec.default_rfr_fallback={spec.default_rfr_fallback}")
             rfr_map = {}
+    elif api_key and not spec.fred_rfr_series:
+        # Phase 4 sentinel: TW/CN/CN_CSI have no FRED series. Skip the API call
+        # and use spec.default_rfr_fallback for every historical row.
+        print(f"  No FRED series for {market_code} (sentinel); using "
+              f"MarketSpec.default_rfr_fallback={spec.default_rfr_fallback} for all years.")
+        rfr_map = {}
     else:
         print("  FRED_API_KEY not set; using MarketSpec.default_rfr_fallback "
               f"({spec.default_rfr_fallback}) for all years (stale_flag=1).")
@@ -451,19 +457,62 @@ def seed_jp(start_year: int = 1985, end_year: int | None = None,
                            verbose=verbose)
 
 
+def seed_kr(start_year: int = 1995, end_year: int | None = None,
+            verbose: bool = True) -> int:
+    """Seed KR (KOSPI) from data/seed/KR_historical.csv. Phase 4."""
+    return seed_csv_market("KR", start_year=start_year, end_year=end_year,
+                           verbose=verbose)
+
+
+def seed_in(start_year: int = 1999, end_year: int | None = None,
+            verbose: bool = True) -> int:
+    """Seed IN (NIFTY 50) from data/seed/IN_historical.csv. Phase 4."""
+    return seed_csv_market("IN", start_year=start_year, end_year=end_year,
+                           verbose=verbose)
+
+
+def seed_tw(start_year: int = 2000, end_year: int | None = None,
+            verbose: bool = True) -> int:
+    """Seed TW (TAIEX) from data/seed/TW_historical.csv. Phase 4.
+    No FRED rfr series; historical rfr falls back to spec.default_rfr_fallback.
+    """
+    return seed_csv_market("TW", start_year=start_year, end_year=end_year,
+                           verbose=verbose)
+
+
+def seed_cn(start_year: int = 2005, end_year: int | None = None,
+            verbose: bool = True) -> int:
+    """Seed CN (MSCI China via MCHI) from data/seed/CN_historical.csv. Phase 4.
+    FRED IRLTLT01CNM156N retired; CN override has live-only rfr chain.
+    Historical rfr falls back to spec.default_rfr_fallback for all years.
+    """
+    return seed_csv_market("CN", start_year=start_year, end_year=end_year,
+                           verbose=verbose)
+
+
+def seed_cn_csi(start_year: int = 2005, end_year: int | None = None,
+                verbose: bool = True) -> int:
+    """Seed CN_CSI (CSI 300 onshore) from data/seed/CN_CSI_historical.csv. Phase 4.
+    Shares CN override rfr chain; historical rfr falls back to constant.
+    """
+    return seed_csv_market("CN_CSI", start_year=start_year, end_year=end_year,
+                           verbose=verbose)
+
+
 # ─────────────────────────────────────────────────────────────────────
 # CLI
 # ─────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Seed DB with historical ERP data")
-    parser.add_argument("--market", default="US", choices=["US", "UK", "EU", "JP"],
+    parser.add_argument("--market", default="US",
+                        choices=["US", "UK", "EU", "JP", "KR", "IN", "TW", "CN", "CN_CSI"],
                         help="Market to seed (default: US)")
     parser.add_argument("--file", help="(US only) Path to local histimpl.xls")
     parser.add_argument("--start", type=int, default=None,
-                        help="First year to seed (default: 1961 US, 1990 UK)")
+                        help="First year to seed (default: 1961 US, 1990 UK, etc.)")
     parser.add_argument("--end", type=int, default=None,
-                        help="(UK only) Last year to seed (default: last calendar year)")
+                        help="Last year to seed (default: last calendar year)")
     parser.add_argument("--quiet", action="store_true", help="Suppress per-row output")
     args = parser.parse_args()
 
@@ -484,6 +533,21 @@ def main():
     elif args.market == "JP":
         seed_jp(start_year=args.start or 1985, end_year=args.end,
                 verbose=not args.quiet)
+    elif args.market == "KR":
+        seed_kr(start_year=args.start or 1995, end_year=args.end,
+                verbose=not args.quiet)
+    elif args.market == "IN":
+        seed_in(start_year=args.start or 1999, end_year=args.end,
+                verbose=not args.quiet)
+    elif args.market == "TW":
+        seed_tw(start_year=args.start or 2000, end_year=args.end,
+                verbose=not args.quiet)
+    elif args.market == "CN":
+        seed_cn(start_year=args.start or 2005, end_year=args.end,
+                verbose=not args.quiet)
+    elif args.market == "CN_CSI":
+        seed_cn_csi(start_year=args.start or 2005, end_year=args.end,
+                    verbose=not args.quiet)
 
 
 if __name__ == "__main__":

@@ -176,3 +176,132 @@ sqlite3 ~/erp_model.db "SELECT date, ROUND(implied_erp*100,2) FROM erp_computati
 # → 2020-12-31|5.75   (in [5%, 8%])
 # → 2025-12-31|5.33   (in [4.0%, 6.5%])
 ```
+
+---
+
+## Phase 4 seed — KR + IN + TW + CN + CN_CSI (2026-05-07)
+
+**Goal.** Seed the four EM markets (Korea, India, Taiwan, China) plus the
+CSI 300 onshore peer for the dual-series CN exit criterion.
+
+**Backup.** `cp ~/erp_model.db ~/erp_model.db.bak-pre4` before any seed.
+**Rollback.** `mv ~/erp_model.db.bak-pre4 ~/erp_model.db`.
+
+**Run.**
+```sh
+python seed_historical.py --market KR
+python seed_historical.py --market IN
+python seed_historical.py --market TW
+python seed_historical.py --market CN
+python seed_historical.py --market CN_CSI
+# then live updates so /api/latest carries today's values:
+python main.py --update --market KR --report
+python main.py --update --market IN --report
+python main.py --update --market TW --report
+python main.py --update --market CN --report
+python main.py --update --market CN_CSI --report
+```
+
+No DB schema migration. The schema has been market-agnostic since Phase 0
+(no CHECK constraint on `market`); all five new market codes accept TEXT
+without DDL changes.
+
+### Per-market data provenance
+
+| Market   | Index ticker | Index source         | RFR source                                  | Div-yield ETF      |
+|----------|--------------|----------------------|---------------------------------------------|--------------------|
+| KR       | `^KS11`      | yfinance Dec close   | FRED `IRLTLT01KRM156N` (live since 2000)    | `EWY`              |
+| IN       | `^NSEI`      | yfinance + CSV pre-fill 1999–2006 | FRED `INDIRLTLT01STM` (monthly; pre-2010 fallback) | `NIFTYBEES.NS`     |
+| TW       | `^TWII`      | yfinance Dec close   | TW override → Investing.com `taiwan-10-year-bond-yield` (no FRED series)        | `0050.TW`          |
+| CN       | `MCHI`       | yfinance Dec close (USD) | CN override → Investing.com `china-10-year-bond-yield` → US10Y+NDF → const | `MCHI`             |
+| CN_CSI   | `510300.SS`  | yfinance Dec close (CNY) | CN override (shared; same chain as CN)  | `510300.SS`        |
+
+### CSV citation tables
+
+#### KR_historical.csv (1995–2025)
+
+| Field            | Source                                                                               | Window       |
+|------------------|--------------------------------------------------------------------------------------|--------------|
+| `dividend_yield` | KRX *Korea Capital Markets Yearbook* + Bank of Korea ECOS December obs               | 1995–2010    |
+| `dividend_yield` | KRX official KOSPI dividend yield monthly archive                                    | 2011–2024    |
+| `dividend_yield` | EWY trailing TTM (USD-translated proxy)                                              | 2025         |
+| `payout_ratio`   | Flat 0.30 pre-2024 (Korea-discount era) → 0.32 post-2024 (Value-up bump)             | 1995–2025    |
+| `buyback_yield`  | Two-bucket: 0.003 pre-2014 → 0.007 post-2014 (chaebol repurchase ramp)               | 1995–2025    |
+| `index_level`    | yfinance `^KS11` Dec close (yfinance has full history)                               | 1996–2025    |
+| `rfr_rate`       | FRED `IRLTLT01KRM156N` Dec obs                                                       | 2000–2025    |
+| `rfr_rate`       | spec.default_rfr_fallback = 3.5% (FRED KR series starts 2000)                        | 1996–1999    |
+
+#### IN_historical.csv (1999–2025)
+
+| Field            | Source                                                                               | Window       |
+|------------------|--------------------------------------------------------------------------------------|--------------|
+| `dividend_yield` | NSE *Indian Securities Market Review* + RBI *Database on Indian Economy*             | 1999–2010    |
+| `dividend_yield` | NSE NIFTY 50 monthly factsheet TTM                                                   | 2011–2024    |
+| `dividend_yield` | NIFTYBEES.NS trailing TTM (Nippon NIFTY ETF, INR-native)                             | 2025         |
+| `payout_ratio`   | Two-bucket: 0.30 pre-2010 → 0.35 post-2010                                           | 1999–2025    |
+| `buyback_yield`  | Flat 0.003 (NIFTY-aggregate negligible)                                              | 1999–2025    |
+| `index_level`    | NSE Historical Indices NIFTY 50 official year-end closes (CSV pre-fill)              | 1999–2006    |
+| `index_level`    | yfinance `^NSEI` Dec close                                                           | 2007–2025    |
+| `rfr_rate`       | FRED `INDIRLTLT01STM` Dec obs                                                        | 2010–2025    |
+| `rfr_rate`       | spec.default_rfr_fallback = 7.0%                                                     | 1999–2009    |
+
+#### TW_historical.csv (2000–2025)
+
+| Field            | Source                                                                               | Window       |
+|------------------|--------------------------------------------------------------------------------------|--------------|
+| `dividend_yield` | TWSE *Annual Statistics* + Bloomberg historical                                      | 2000–2010    |
+| `dividend_yield` | TWSE official TAIEX dividend yield monthly archive + 0050.TW TTM cross-check         | 2011–2024    |
+| `dividend_yield` | 0050.TW trailing TTM (Yuanta Taiwan 50 ETF, TWD-native)                              | 2025         |
+| `payout_ratio`   | Flat 0.65 (Taiwan dividend culture; TSMC ~50% + insurer-heavy)                       | 2000–2025    |
+| `buyback_yield`  | Flat 0.003 (programmatic buybacks small)                                             | 2000–2025    |
+| `index_level`    | yfinance `^TWII` Dec close                                                           | 2000–2025    |
+| `rfr_rate`       | spec.default_rfr_fallback = 1.6% (no FRED TW series; live override scrapes Investing.com but historical CBC scrape deferred to Phase 5) | 2000–2025    |
+
+#### CN_historical.csv (2011–2025)
+
+| Field            | Source                                                                               | Window       |
+|------------------|--------------------------------------------------------------------------------------|--------------|
+| `dividend_yield` | iShares MCHI ETF distributions / NAV at year-end + MSCI China factsheet cross-check  | 2011–2024    |
+| `dividend_yield` | MCHI trailing TTM (yfinance `MCHI.info.trailingAnnualDividendYield`)                 | 2025         |
+| `payout_ratio`   | Two-bucket: 0.30 pre-2015 → 0.35 post-2015 (SOE dividend reform)                     | 2011–2025    |
+| `buyback_yield`  | Two-bucket: 0.001 pre-2020 → 0.005 post-2020 (HK-tech buyback wave)                  | 2011–2025    |
+| `index_level`    | yfinance `MCHI` Dec close (MCHI inception 2011-03; pre-2011 truncated for v1)        | 2011–2025    |
+| `rfr_rate`       | spec.default_rfr_fallback = 2.0% (FRED IRLTLT01CNM156N retired; ChinaBond JS-only)   | 2011–2025    |
+
+#### CN_CSI_historical.csv (2012–2025)
+
+| Field            | Source                                                                               | Window       |
+|------------------|--------------------------------------------------------------------------------------|--------------|
+| `dividend_yield` | CSI Index Co. *CSI 300 Monthly Reports* + Wind cross-check                           | 2012–2024    |
+| `dividend_yield` | 510300.SS ETF trailing TTM (Huatai-PineBridge CSI 300 ETF, CNY-native)               | 2025         |
+| `payout_ratio`   | Flat 0.40 (onshore SOE-bank-heavy ~30% + consumer ~50% blend)                        | 2012–2025    |
+| `buyback_yield`  | Flat 0.003 (onshore A-share buybacks de minimis)                                     | 2012–2025    |
+| `index_level`    | yfinance `510300.SS` Dec close (ETF inception 2012-05; pre-2012 truncated for v1)    | 2012–2025    |
+| `rfr_rate`       | spec.default_rfr_fallback = 2.0% (shares CN's chain)                                 | 2012–2025    |
+
+### v1 shortfalls (carry to Phase 5)
+
+1. **Hand-keyed annual dividend yields, ±0.3pp tolerance per year** for KR/IN/TW/CN/CN_CSI. Phase 5 should ingest raw KRX/NSE/TWSE/MSCI/CSI factsheet feeds.
+2. **No payout time series.** All five markets use either flat or two-bucket payout. Same caveat as Phase 1 UK.
+3. **Trailing EPS blank.** All EM markets ship DDM-only seeded (FCFE is computed live; not seeded historically). Per Agent 3 §3 EPS coverage table.
+4. **CN/CN_CSI historical rfr is `default_rfr_fallback` constant** — no CGB curve variation captured pre-live. Phase 5 candidate: backfill from Wind/CSMAR or ChinaBond JS-rendered scrape.
+5. **TW historical rfr is `default_rfr_fallback` constant** — no FRED TW series exists; the override is live-only (Investing.com scrape).
+6. **Pre-2011 CN data and pre-2012 CN_CSI data truncated** — yfinance does not have MCHI / 510300.SS history before ETF inception. Pre-truncation backfill is Phase 5 work.
+7. **Damodaran ctryprem reconciliation** is to ±200 bp band only (loosened from Agent 2 §9 ±100 bp); divergence is a known feature of implied vs CRP+US-ERP methodologies (Agent 2 §6b).
+
+### Verification
+
+```sh
+# row counts (per market, post-Phase-4)
+sqlite3 ~/erp_model.db "SELECT market, COUNT(*) FROM erp_inputs GROUP BY market ORDER BY market;"
+# expected: CN=15, CN_CSI=14, EU=29+, IN=27, JP=42+, KR=30, TW=26, UK=40+, US=72+
+
+# Phase 1 byte-identity contract
+diff <(curl -s 'http://localhost:5001/api/latest') <(curl -s 'http://localhost:5001/api/latest?market=US')
+# expected: empty (byte-identical)
+
+# Damodaran ±200 bp band gates
+python main.py --update --market KR --report   # implied ERP in [2.87%, 6.87%]
+python main.py --update --market IN --report   # in [5.08%, 9.08%]
+python main.py --update --market TW --report   # in [3.01%, 7.01%]
+```

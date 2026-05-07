@@ -279,10 +279,11 @@
               + '<option value="UK">UK</option>'
               + '<option value="EU">EU</option>'
               + '<option value="JP">JP</option>'
-              + '<option value="KR" disabled>KR (Phase 3+)</option>'
-              + '<option value="IN" disabled>IN (Phase 3+)</option>'
-              + '<option value="TW" disabled>TW (Phase 3+)</option>'
-              + '<option value="CN" disabled>CN (Phase 3+)</option>'
+              + '<option value="KR">KR</option>'
+              + '<option value="IN">IN</option>'
+              + '<option value="TW">TW</option>'
+              + '<option value="CN">CN (MSCI)</option>'
+              + '<option value="CN_CSI">CN (CSI 300)</option>'
             + '</select>'
             + '<span id="erp-source-badge"></span>';
           document.body.insertBefore(strip, document.body.firstChild);
@@ -307,7 +308,12 @@
               var src = d.data_source || 'auto';
               var cur = d.currency || '';
               var notes = d.quality_notes ? ' — ' + d.quality_notes : '';
-              el.textContent = 'Source: ' + src + (cur ? ' (' + cur + ')' : '') + notes;
+              // Phase 4: append per-market data_quality tier from __ERP_LABELS__.
+              var labels = window.__ERP_LABELS__ || {};
+              var entry  = labels[getMarket()] || {};
+              var tier   = entry.dataQuality;
+              var tierStr = (tier && tier !== 'full') ? ' · ' + tier : '';
+              el.textContent = 'Source: ' + src + (cur ? ' (' + cur + ')' : '') + tierStr + notes;
             })
             .catch(function () { /* silent */ });
         }

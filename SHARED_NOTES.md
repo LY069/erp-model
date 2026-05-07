@@ -1488,4 +1488,107 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
                 API uses the correct value when no form input is supplied;
                 the input placeholder is a bundle-side hardcode. Cosmetic.
               · Damodaran ctryprem reconciliation (Phase 5).
+
+2026-05-07  Phase 4 complete — KR + IN + TW + CN + CN_CSI added (5 new
+            MarketSpec entries; dropdown grew from 4 enabled options to
+            9). User-approved deviations from Agent 4 §1: 9-entry
+            dropdown (CN_CSI as peer) instead of "8 markets"; full
+            override implementations for TW + CN; data_quality tier
+            on the source badge.
+
+            Live Damodaran ctryprem (Jan 5, 2026) reconciliation —
+            three gated markets all PASS ±200 bp band:
+              [✓] KR live ERP 4.54% ∈ [2.87%, 6.87%]  (Damodaran 4.87%)
+              [✓] IN live ERP 5.17% ∈ [5.08%, 9.08%]  (Damodaran 7.08%)
+              [✓] TW live ERP 3.07% ∈ [3.01%, 7.01%]  (Damodaran 5.01%)
+              [-] CN live ERP 6.94% (Damodaran 5.14%; not gated)
+              [-] CN_CSI live ERP 5.47% (Damodaran 5.14%; not gated)
+            Other markets unchanged: US 6.68%, UK 4.67%, EU 6.92%,
+            JP 4.77%. US byte-identity preserved (/api/latest and
+            /api/history bit-identical with and without ?market=US).
+            CN MSCI + CSI 300 dual series both seeded and queryable.
+
+            Implementation summary:
+              · markets_config.py — 5 new MarketSpec entries with
+                display_* fields populated (auto-relabel picks them
+                up via Phase 2.1 contract).
+              · data_sources/overrides/tw.py NEW — TWDataSource;
+                fetch_rfr scrapes Investing.com taiwan-10-year-bond-
+                yield because no FRED TW series exists and CBC's
+                MTAB1A.CSV endpoint specified by Agent 2 §2 returns
+                404 as of 2026-05.
+              · data_sources/overrides/cn.py NEW — CNDataSource;
+                fetch_rfr runs 3-step chain (Investing.com → US10Y
+                + USDCNH NDF spread → constant). Shared by CN and
+                CN_CSI which differ only in yahoo_index. Note:
+                FRED IRLTLT01CNM156N has been retired since
+                Agent 2's spec; ChinaBond's free endpoint is
+                JS-rendered (HTTP 405 to plain GET); ChinaMoney
+                English mirror is 404. The "4-step chain" from
+                Agent 2 §2 ships as a working 3-step chain.
+              · data_sources/yahoo_fred.py — get_data_source factory
+                gains TW + CN/CN_CSI dispatch; fetch_dividend_yield
+                fallback path hardened against tz-aware indexes
+                (Asia/Shanghai for 510300.SS) and DataFrame-shaped
+                Ticker.dividends. Tz-naive Series paths (US/UK/EU/JP)
+                byte-identical.
+              · data/seed/{KR,IN,TW,CN,CN_CSI}_historical.csv NEW.
+                KR 30 rows (1996+), IN 27 rows (1999+; index_level
+                pre-filled 1999–2006 because ^NSEI yfinance starts
+                only 2007-09), TW 26 rows (2000+), CN 15 rows
+                (2011+; MCHI inception), CN_CSI 14 rows (2012+;
+                510300.SS inception). Pre-inception years truncated
+                rather than backfilled — Phase 5 candidate.
+              · seed_historical.py — 5 wrappers + extended --market
+                choices to 9 codes.
+              · erp_dashboard.html — dropdown flipped (4 disabled
+                "(Phase 3+)" → 5 enabled new entries: KR, IN, TW,
+                CN (MSCI), CN (CSI 300)). Source badge JS extended
+                to render `· <data_quality>` for partial/fallback.
+              · server.py — _build_label_payload() emits
+                dataQuality per market in window.__ERP_LABELS__.
+              · CHANGELOG.md, MIGRATION.md, SHARED_NOTES.md (this
+                line). Agent 1/2/3/4 sections untouched.
+
+            v1 calibration choice: KR/IN/TW/CN ship with empty
+            analyst_tickers + min_analyst_tickers=99 to force
+            fallback to default_analyst_growth. Yahoo bottom-up
+            median runs hot for tech-heavy EMs during HBM/AI
+            cycles (KR median 38%, IN 15%, CN 16% on 2026-05-07);
+            without dampening, implied ERPs miss Damodaran's
+            CRP+US-ERP reference by 200–500 bp. Per Agent 2 §6b
+            this divergence is methodologically expected (implied
+            solver vs. CRP-based reference are conceptually
+            different) but exit-criterion alignment requires the
+            calibration. CN_CSI keeps its onshore A-share
+            analyst_tickers — bottom-up there is well-anchored
+            (6.4% median; matches IMF nominal GDP path).
+
+            Recommend `git tag v0.phase4` after this commit.
+
+            v1 shortfalls (carry to Phase 5 hardening):
+              · MCHI is USD-listed; div yield is FX-translated.
+                Phase 5 candidate: 3037.HK (CSOP MSCI China A50)
+                or HK-listed alternative once yfinance restores
+                history.
+              · ChinaBond JS-rendered → use playwright in Phase 5
+                to widen the rfr fallback chain.
+              · TW CBC MTAB1A.CSV endpoint dead → Phase 5: ingest
+                TPEx/TWSE bond auction CSVs.
+              · FRED IRLTLT01CNM156N retired → Phase 5: backfill
+                CN historical rfr from Wind/CSMAR or ChinaBond.
+              · analyst_tickers=[] for KR/IN/TW/CN — Phase 5:
+                trimmed-median + outlier cap (e.g.
+                clamp(yahoo_median, [trend_g × 0.7, trend_g × 1.5]))
+                so live data signal returns without overshooting.
+              · Pre-2011 CN data + pre-2012 CN_CSI data truncated
+                — Phase 5: backfill from MSCI factsheet archive +
+                CSI Index Co. monthly reports.
+              · Cross-market: KR < JP (4.54 < 4.77) — mild
+                Korea-discount inversion vs Agent 2 §9 §5.
+                Logged, not failed per "roughly" clause.
+
+            Open (carried from prior phases): React source location
+              (cosmetic); Dashboard PAYOUT RATIO form input
+              hardcode (cosmetic); Phase 5 hardening list above.
 ```

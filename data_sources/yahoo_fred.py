@@ -80,6 +80,14 @@ class YahooFredDataSource:
 
         if FRED_API_KEY:
             for series in [self.spec.fred_rfr_series, *self.spec.fred_rfr_fallback]:
+                if not series:
+                    # Phase 4 sentinel: TW/CN/CN_CSI use fred_rfr_series=""
+                    # because no FRED series exists (or it has been retired).
+                    # Their overrides replace fetch_rfr; if base-class fetch_rfr
+                    # is ever invoked directly, fall straight through to the
+                    # constant fallback rather than hitting the API with an
+                    # empty series_id.
+                    continue
                 try:
                     from fredapi import Fred
                     fred = Fred(api_key=FRED_API_KEY)
@@ -137,12 +145,23 @@ class YahooFredDataSource:
         # Fallback: trailing 12M distribution / current price
         end = datetime.now()
         divs = ticker.dividends
+        # Some ETFs (notably 510300.SS) return a single-column DataFrame
+        # rather than a Series — coerce to Series of dividend amounts.
+        if hasattr(divs, "columns"):
+            div_col = "Dividends" if "Dividends" in divs.columns else divs.columns[0]
+            divs = divs[div_col]
         if len(divs) == 0:
             warnings.warn(
                 f"No dividend data for {self.spec.yahoo_etf_for_divy}; using 1.5% default")
             return FetchResult(value=0.015, source="default:1.5%",
                                fetched_at=_now(), is_fallback=True)
 
+        # 510300.SS and other CN/HK ETFs return tz-aware indexes (Asia/Shanghai);
+        # comparing against a tz-naive datetime raises TypeError on pandas 2.x.
+        # Normalise the index to tz-naive before comparing.
+        if getattr(divs.index, "tz", None) is not None:
+            divs = divs.copy()
+            divs.index = divs.index.tz_localize(None)
         recent = divs[divs.index >= (end - timedelta(days=365))]
         annual_div = float(recent.sum())
         price = float(ticker.history(period="1d")["Close"].iloc[-1])
@@ -303,4 +322,10 @@ def get_data_source(market: str) -> YahooFredDataSource:
     if market == "JP":
         from data_sources.overrides.jp import JPDataSource
         return JPDataSource(spec)
+    if market == "TW":
+        from data_sources.overrides.tw import TWDataSource
+        return TWDataSource(spec)
+    if market in ("CN", "CN_CSI"):
+        from data_sources.overrides.cn import CNDataSource
+        return CNDataSource(spec)
     return YahooFredDataSource(spec)

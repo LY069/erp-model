@@ -93,6 +93,7 @@ def _build_label_payload() -> str:
             "currencySymbol": m.currency_symbol,
             "currencyCode":   m.currency,
             "name":           m.name,
+            "dataQuality":    m.data_quality,                # Phase 4 EM badge
         }
         for code, m in MARKETS.items()
     }

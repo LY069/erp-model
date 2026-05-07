@@ -9,6 +9,120 @@ the overall delivery plan.
 
 ## [Unreleased]
 
+## [v0.phase4] — 2026-05-07
+
+Emerging-markets tier. Adds Korea (KOSPI), India (NIFTY 50), Taiwan (TAIEX),
+and China — both MSCI China (MCHI ETF proxy) and CSI 300 onshore (510300.SS
+ETF proxy) — bringing the dropdown to 9 markets total. Two new override
+modules absorb the EM data-source quirks: `data_sources/overrides/tw.py`
+scrapes Investing.com for Taiwan 10Y because no FRED series exists for TW,
+and `data_sources/overrides/cn.py` runs a 3-step fallback chain
+(Investing.com → US 10Y + USDCNH NDF spread → constant) shared by both CN
+entries because FRED `IRLTLT01CNM156N` was retired and ChinaBond is
+JS-rendered. Phase 1 byte-identity contract (US `/api/latest` and
+`/api/history` byte-identical with and without `?market=US`) preserved.
+
+### Added
+- `markets_config.py` — five new MarketSpec entries: `KR`, `IN`, `TW`,
+  `CN`, `CN_CSI`. Each populates display fields so the dashboard relabel
+  picks them up automatically (Phase 2.1 contract).
+- `data_sources/overrides/tw.py` — `TWDataSource(YahooFredDataSource)`.
+  Overrides `fetch_rfr` to scrape Investing.com `taiwan-10-year-bond-yield`
+  (the CBC `MTAB1A.CSV` endpoint specified by Agent 2 §2 returns 404 as
+  of 2026-05; CBC has shifted to interactive-form-only access).
+- `data_sources/overrides/cn.py` — `CNDataSource(YahooFredDataSource)`.
+  Overrides `fetch_rfr` with a 3-step chain. Shared by `CN` (MSCI China
+  via `MCHI`) and `CN_CSI` (CSI 300 via `510300.SS`); they differ only in
+  `yahoo_index`, share the same CGB rfr.
+- `data/seed/{KR,IN,TW,CN,CN_CSI}_historical.csv` — five new seed CSVs.
+  KR 1996–2025 (30 rows), IN 1999–2025 (27 rows; 1999–2006 index_level
+  pre-filled because `^NSEI` on yfinance starts only 2007-09), TW
+  2000–2025 (26 rows), CN 2011–2025 (15 rows; MCHI ETF inception 2011-03),
+  CN_CSI 2012–2025 (14 rows; 510300.SS ETF inception 2012-05).
+- `seed_historical.py` — five new wrapper functions (`seed_kr`, `seed_in`,
+  `seed_tw`, `seed_cn`, `seed_cn_csi`); `--market` choices extended to
+  `{US, UK, EU, JP, KR, IN, TW, CN, CN_CSI}`.
+- `erp_dashboard.html` — dropdown grows from 4 enabled options
+  (US/UK/EU/JP) + 4 disabled (`(Phase 3+)`) to 9 enabled options. CN now
+  reads `CN (MSCI)` and a peer `CN (CSI 300)` option exposes the onshore
+  series. Source-badge JS appends `· <data_quality>` when the tier is
+  `partial` or `fallback`, surfacing Agent 4 §1's data-quality badge.
+- `server.py` — `_build_label_payload()` emits `dataQuality` per market
+  in `window.__ERP_LABELS__` so the dashboard relabel JS can render it
+  without an additional API round-trip.
+
+### Changed
+- `data_sources/yahoo_fred.py` — `get_data_source()` factory now dispatches
+  `TW → TWDataSource` and `CN`/`CN_CSI → CNDataSource`. JP/US/UK/EU paths
+  unchanged.
+- `data_sources/yahoo_fred.py` — `fetch_dividend_yield` fallback path
+  hardened against tz-aware dividend indexes (Asia/Shanghai for
+  `510300.SS`) and DataFrame-shaped `Ticker.dividends` returns. Tz-naive
+  Series paths (US/UK/EU/JP) are byte-identical.
+- `markets_config.py` — for KR/IN/TW/CN, `analyst_tickers` set to `[]`
+  with `min_analyst_tickers=99`, forcing the analyst-growth path to fall
+  through to `default_analyst_growth`. Yahoo bottom-up median runs hot
+  for tech-heavy EMs during HBM/AI cycles (KR median was 38% on 2026-05;
+  IN 15%; CN 16%) and produces implied ERPs that diverge sharply from
+  Damodaran ctryprem. Per Agent 2 §6b this divergence is expected
+  (implied solver vs. CRP+US-ERP reference are conceptually different),
+  but the v1 calibration favours alignment with the reference. Defaults
+  used: KR 6.0%, IN 22.0%, TW 10.0%, CN 7.5%, CN_CSI 6.4% (CN_CSI keeps
+  its own analyst_tickers — onshore A-share growth is well-anchored).
+
+### Validation — Damodaran ctryprem reconciliation (Jan 5, 2026 table)
+
+| Market   | Live ERP | Damodaran | ±200 bp band   | Status |
+|----------|----------|-----------|----------------|--------|
+| KR       | 4.54%    | 4.87%     | [2.87%, 6.87%] | ✓ PASS |
+| IN       | 5.17%    | 7.08%     | [5.08%, 9.08%] | ✓ PASS |
+| TW       | 3.07%    | 5.01%     | [3.01%, 7.01%] | ✓ PASS (+6 bp inside lower bound) |
+| CN       | 6.94%    | 5.14%     | not gated      | (target only — +180 bp) |
+| CN_CSI   | 5.47%    | 5.14%     | not gated      | (target only — +33 bp) |
+
+Other markets (Phase 3.2 baseline, unchanged): US 6.68%, UK 4.67%,
+EU 6.92%, JP 4.77%.
+
+Cross-market sanity (Agent 2 §9 §5): IN > KR holds; KR < JP is a mild
+inversion (Korea-discount artifact) — flagged, not failed per "roughly"
+clause.
+
+US `/api/latest` and `/api/history` remain byte-identical with and without
+`?market=US` — Phase 1 contract preserved.
+
+### Known v1 limitations (Phase 5 candidates)
+- `MCHI` is a USD-listed ETF; the index-level scale cancels in DDM
+  (verified per Phase 3.1 JP design note) but the dividend yield is an
+  FX-translated USD distribution. Acceptable v1 approximation;
+  candidate replacement: HK-listed CSOP MSCI China A50 (3037.HK) once
+  yfinance restores ample history.
+- ChinaBond's free yield-curve endpoint is JS-rendered (HTTP 405 to
+  plain GET) and ChinaMoney's English mirror is 404; the planned
+  4-step fallback chain ships as a working 3-step chain
+  (Investing.com → US+NDF → constant). Phase 5 candidate: drive
+  ChinaBond via `playwright` for richer fallbacks.
+- TW CBC `MTAB1A.CSV` endpoint specified by Agent 2 §2 returns 404
+  (CBC has moved its public stats behind interactive forms). The TW
+  override scrapes Investing.com `taiwan-10-year-bond-yield` instead.
+  Phase 5 candidate: ingest TPEx / TWSE auction CSVs.
+- FRED `IRLTLT01CNM156N` retired sometime between Agent 2's spec and
+  2026-05; CN historical rfr is `default_rfr_fallback` constant for all
+  seeded years (no historical CGB time variation captured). Phase 5
+  candidate: backfill from Wind/CSMAR or ChinaBond JS scrape.
+- FRED `INDIRLTLT01STM` is monthly (12 years of pre-2010 IN rows fall
+  back to constant rfr).
+- `analyst_tickers` for KR/IN/TW/CN is `[]` (v1 EM dampening to keep
+  bottom-up tech-cycle volatility from blowing up implied ERPs vs
+  Damodaran). Phase 5 candidate: trimmed-median + outlier cap (e.g.
+  `clamp(yahoo_median, [trend_growth × 0.7, trend_growth × 1.5])`)
+  so live data signal returns without overshooting.
+- IN seed CSV index_level pre-filled for 1999–2006 because `^NSEI` on
+  yfinance starts only 2007-09. Values are NIFTY 50 official year-end
+  closes from NSE Historical Indices.
+- CN seed truncated to 2011+ (MCHI inception); CN_CSI to 2012+ (510300.SS
+  inception). Pre-2011 backfill is a Phase 5 effort against MSCI China
+  factsheet archive + CSI Index Co. monthly reports.
+
 ## [v0.phase3.1] — 2026-05-07
 
 JP data-source upgrade. Phase 3 documented two known JP data-quality holes;

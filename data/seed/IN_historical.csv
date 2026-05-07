@@ -1,0 +1,59 @@
+# IN_historical.csv — NIFTY 50 annual seed, 1999-12-31 onward.
+#
+# Schema (per SHARED_NOTES.md / Agent 3 §4):
+#   date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,
+#   analyst_5yr_growth,payout_ratio,source,notes
+#
+# - Decimals (0.0125, not 1.25). Yields are gross (NIFTY 50 trailing).
+# - Blank fields filled at seed time:
+#     index_level    ← yfinance ^NSEI Dec close
+#     rfr_rate       ← FRED INDIRLTLT01STM December observation
+# - trailing_eps blank → DDM-only seed (FCFE deferred per Agent 3 §3).
+# - analyst_5yr_growth ALWAYS blank → MarketSpec default at seed time.
+#
+# DIVIDEND YIELD SOURCES (hand-keyed annual averages, v1):
+#   1999–2010: NSE *Indian Securities Market Review* + RBI *Database
+#              on Indian Economy* (NIFTY 50 P/D end-of-year).
+#   2011–2024: NSE NIFTY 50 monthly factsheet TTM div yield.
+#   2025:      NIFTYBEES.NS trailing TTM (Nippon NIFTY ETF, INR-native).
+# INDEX LEVEL: 1999–2006 pre-filled in CSV (^NSEI on yfinance only goes back
+#              to 2007-09-17). Values are NIFTY 50 official year-end closes
+#              from NSE Historical Indices (publicly archived).
+# PAYOUT RATIO SOURCES (Agent 2 §3 anchor):
+#   Two-bucket: 0.30 pre-2010 (high-retention/reinvestment era);
+#   0.35 post-2010 (broader-based dividend culture).
+# BUYBACK YIELD SOURCES:
+#   Flat 0.003 (Indian buybacks exist — IT/tech-led — but swamped
+#   by new issuance; NIFTY-aggregate buyback yield negligible).
+#
+# v1 limitations: hand-keyed; pre-2005 data is approximate (NIFTY
+# constituents and reporting standards shifted post-Companies Act 2013).
+# Phase 5 should ingest raw NSE feeds.
+date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,analyst_5yr_growth,payout_ratio,source,notes
+1999-12-31,1480.45,0.0090,0.003,,,,0.30,seed:IN:csv,index pre-filled (^NSEI on yfinance starts 2007)
+2000-12-31,1263.55,0.0150,0.003,,,,0.30,seed:IN:csv,dot-com bust; index pre-filled
+2001-12-31,1059.05,0.0210,0.003,,,,0.30,seed:IN:csv,index pre-filled
+2002-12-31,1093.50,0.0220,0.003,,,,0.30,seed:IN:csv,index pre-filled
+2003-12-31,1879.75,0.0190,0.003,,,,0.30,seed:IN:csv,index pre-filled
+2004-12-31,2080.50,0.0150,0.003,,,,0.30,seed:IN:csv,index pre-filled
+2005-12-31,2836.55,0.0125,0.003,,,,0.30,seed:IN:csv,index pre-filled
+2006-12-31,3966.40,0.0110,0.003,,,,0.30,seed:IN:csv,index pre-filled
+2007-12-31,,0.0090,0.003,,,,0.30,seed:IN:csv,bull market
+2008-12-31,,0.0210,0.003,,,,0.30,seed:IN:csv,GFC
+2009-12-31,,0.0110,0.003,,,,0.30,seed:IN:csv,
+2010-12-31,,0.0100,0.003,,,,0.35,seed:IN:csv,payout bucket up
+2011-12-31,,0.0150,0.003,,,,0.35,seed:IN:csv,
+2012-12-31,,0.0140,0.003,,,,0.35,seed:IN:csv,
+2013-12-31,,0.0140,0.003,,,,0.35,seed:IN:csv,
+2014-12-31,,0.0125,0.003,,,,0.35,seed:IN:csv,
+2015-12-31,,0.0140,0.003,,,,0.35,seed:IN:csv,
+2016-12-31,,0.0135,0.003,,,,0.35,seed:IN:csv,
+2017-12-31,,0.0110,0.003,,,,0.35,seed:IN:csv,
+2018-12-31,,0.0125,0.003,,,,0.35,seed:IN:csv,
+2019-12-31,,0.0125,0.003,,,,0.35,seed:IN:csv,
+2020-12-31,,0.0110,0.003,,,,0.35,seed:IN:csv,COVID
+2021-12-31,,0.0105,0.003,,,,0.35,seed:IN:csv,
+2022-12-31,,0.0140,0.003,,,,0.35,seed:IN:csv,
+2023-12-31,,0.0125,0.003,,,,0.35,seed:IN:csv,
+2024-12-31,,0.0120,0.003,,,,0.35,seed:IN:csv,
+2025-12-31,,0.0125,0.003,,,,0.35,seed:IN:csv,

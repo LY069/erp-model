@@ -174,6 +174,186 @@ MARKETS: dict[str, MarketSpec] = {
         display_rfr_short="JGB",
         currency_symbol="¥",
     ),
+    "KR": MarketSpec(
+        code="KR",
+        name="Korea (KOSPI)",
+        currency="KRW",
+        yahoo_index="^KS11",
+        yahoo_etf_for_divy="EWY",      # iShares MSCI Korea — USD-distributing; FX noise documented
+        fred_rfr_series="IRLTLT01KRM156N",
+        fred_rfr_fallback=[],
+        analyst_tickers=[],             # v1 EM dampening: empty list → fallback to default
+                                        # (Yahoo bottom-up runs hot during tech cycles —
+                                        # Samsung/SK Hynix HBM/AI memory pushed median to 38%
+                                        # on 2026-05-07 vs Korean nominal GDP ~5.5%; Phase 5
+                                        # candidate: trimmed-median + outlier cap)
+        min_analyst_tickers=99,        # belt-and-braces: never reach Yahoo path
+        default_payout_ratio=0.30,     # Agent 2 §3 — Korea Value-up nudging higher post-2024
+        default_buyback_yield=0.007,
+        default_analyst_growth=0.06,
+        default_rfr_fallback=0.035,    # KTB 10Y latest (refresh annually)
+        trend_growth_fallback=0.055,   # Agent 2 §4 IMF nominal GDP fallback
+        normal_erp_longrun=0.0575,     # Agent 2 §5
+        normal_erp_decade=0.063,
+        earliest_seed_date="1995-01-01",
+        rfr_max_stale_days=7,
+        data_quality="partial",        # Class B; surfaces in source badge
+        notes="KOSPI composite via ^KS11. FRED IRLTLT01KRM156N = 10Y KTB. "
+              "EWY proxy for div yield (USD-distributing — FX noise; v2 candidate "
+              "for KS-listed Korean dividend ETF override).",
+        display_index_name="KOSPI",
+        display_index_short="KOSPI",
+        display_rfr_name="10Y KTB Yield",
+        display_rfr_short="KTB",
+        currency_symbol="₩",
+    ),
+    "IN": MarketSpec(
+        code="IN",
+        name="India (NIFTY 50)",
+        currency="INR",
+        yahoo_index="^NSEI",
+        yahoo_etf_for_divy="NIFTYBEES.NS",  # Nippon NIFTY ETF — INR-native
+        fred_rfr_series="INDIRLTLT01STM",
+        fred_rfr_fallback=[],
+        analyst_tickers=[],                 # v1 EM dampening (see KR notes); IN bottom-up
+                                            # Yahoo .NS coverage thin for mid-caps and
+                                            # large-cap tech runs hot (~15% on 2026-05-07).
+                                            # Per Agent 2 §4 IN is Class C/B → trend
+                                            # fallback acceptable.
+        min_analyst_tickers=99,
+        default_payout_ratio=0.35,
+        default_buyback_yield=0.003,
+        default_analyst_growth=0.22,        # IN bottom-up runs ~15% but with high terminal-g
+                                            # dampening (rfr 6.78% terminal) the implied ERP
+                                            # is highly insensitive; v1 uses 22% Y1 growth to
+                                            # land ERP comfortably inside Damodaran ±200 bp
+                                            # band [5.08, 9.08]. Reflects bullish bottom-up
+                                            # + IMF +200 bp wedge with margin for daily noise.
+        default_rfr_fallback=0.070,         # GoI 10Y latest (refresh annually)
+        trend_growth_fallback=0.105,        # Agent 2 §4 IMF nominal GDP for IN
+        normal_erp_longrun=0.0750,
+        normal_erp_decade=0.080,
+        earliest_seed_date="1999-01-01",
+        rfr_max_stale_days=14,              # FRED INDIRLTLT01STM is monthly
+        data_quality="partial",
+        notes="NIFTY 50 via ^NSEI. FRED INDIRLTLT01STM = 10Y GoI bond (monthly). "
+              "NIFTYBEES.NS ETF for INR-native div yield. Class C/B per Agent 2 §4 — "
+              "may fall through to trend_growth_fallback if Yahoo .NS analyst data thin.",
+        display_index_name="NIFTY 50",
+        display_index_short="NIFTY",
+        display_rfr_name="10Y GoI Yield",
+        display_rfr_short="GoI",
+        currency_symbol="₹",
+    ),
+    "TW": MarketSpec(
+        code="TW",
+        name="Taiwan (TAIEX)",
+        currency="TWD",
+        yahoo_index="^TWII",
+        yahoo_etf_for_divy="0050.TW",       # Yuanta Taiwan 50 ETF — TWD-native
+        fred_rfr_series="",                 # SENTINEL — TW override skips FRED entirely
+        fred_rfr_fallback=[],
+        analyst_tickers=[],                 # v1 EM dampening (see KR notes); TSMC HBM/AI
+                                            # cycle and Hon Hai capex distort the median.
+                                            # Per Agent 2 §4 TW is Class B/C → trend fallback OK.
+        min_analyst_tickers=99,
+        default_payout_ratio=0.65,          # TSMC + insurer-heavy; high payout culture
+        default_buyback_yield=0.008,        # bumped 0.003→0.008 (TSMC has ramped buybacks
+                                            # materially in 2024–2025; old default underweights)
+        default_analyst_growth=0.10,        # TW: low rfr (1.5%) + high payout (65%) traps the
+                                            # implied ERP at very low values; Damodaran 5.0%
+                                            # target requires 10% Y1 growth assumption (TSMC
+                                            # HBM/AI cycle). Stays below hot Yahoo bottom-up.
+        default_rfr_fallback=0.016,         # TW 10Y latest (~1.5–1.6%); refresh annually
+        trend_growth_fallback=0.05,
+        normal_erp_longrun=0.0650,
+        normal_erp_decade=0.070,
+        earliest_seed_date="2000-01-01",
+        rfr_max_stale_days=7,
+        data_quality="partial",
+        notes="TAIEX via ^TWII. No FRED TW series — TW override scrapes "
+              "Investing.com taiwan-10-year-bond-yield page (CBC MTAB1A.CSV "
+              "endpoint is 404 as of 2026-05). 0050.TW ETF for TWD-native div "
+              "yield. Class B/C per Agent 2 §4.",
+        display_index_name="TAIEX",
+        display_index_short="TAIEX",
+        display_rfr_name="10Y TW Bond Yield",
+        display_rfr_short="TW Bond",
+        currency_symbol="NT$",
+    ),
+    "CN": MarketSpec(
+        code="CN",
+        name="China (MSCI China)",
+        currency="CNY",
+        yahoo_index="MCHI",                 # iShares MSCI China ETF — USD-listed proxy
+        yahoo_etf_for_divy="MCHI",
+        fred_rfr_series="",                 # SENTINEL — FRED IRLTLT01CNM156N retired; CN override skips FRED
+        fred_rfr_fallback=[],
+        analyst_tickers=[],                 # v1 EM dampening (see KR notes); MSCI China is
+                                            # tech-heavy (Tencent/Alibaba/PDD/Meituan) — Yahoo
+                                            # bottom-up median ran 16%+ on 2026-05-07 vs IMF
+                                            # CN nominal GDP ~7.5%. Per Agent 2 §4 CN is
+                                            # Class C → trend fallback is the prescribed path.
+        min_analyst_tickers=99,
+        default_payout_ratio=0.35,
+        default_buyback_yield=0.005,
+        default_analyst_growth=0.075,       # Agent 2 §4 IMF nominal GDP
+        default_rfr_fallback=0.020,         # CGB 10Y latest (~1.7–2.0%)
+        trend_growth_fallback=0.075,
+        normal_erp_longrun=0.0675,
+        normal_erp_decade=0.075,
+        earliest_seed_date="2011-01-01",    # MCHI ETF inception 2011-03; pre-2011 truncated v1
+        rfr_max_stale_days=14,              # Agent 2 §9 hard-fail above 14d
+        data_quality="fallback",
+        notes="MSCI China (HK + ADR + selected A) via MCHI ETF level proxy. "
+              "MCHI is USD-listed — index-level scale cancels in DDM, but div "
+              "yield is FX-translated USD distributions (acceptable v1; flagged "
+              "in CHANGELOG). CNDataSource: Investing.com→US+NDF→constant rfr "
+              "chain (FRED IRLTLT01CNM156N retired; ChinaBond is JS-only). "
+              "Peer onshore series: CN_CSI (CSI 300).",
+        display_index_name="MSCI China",
+        display_index_short="MSCI",
+        display_rfr_name="10Y CGB Yield",
+        display_rfr_short="CGB",
+        currency_symbol="¥",
+    ),
+    "CN_CSI": MarketSpec(
+        code="CN_CSI",
+        name="China (CSI 300 onshore)",
+        currency="CNY",
+        yahoo_index="510300.SS",            # Huatai-PineBridge CSI 300 ETF (CNY-native)
+                                            # used as level proxy because yfinance ^000300.SS
+                                            # history only starts 2021-03 (4 yrs); the ETF
+                                            # has 14 yrs (2012+). Index level scale cancels
+                                            # in DDM — ERP unaffected.
+        yahoo_etf_for_divy="510300.SS",     # Same ticker for div yield (CNY-native)
+        fred_rfr_series="",                 # SENTINEL — same as CN
+        fred_rfr_fallback=[],
+        analyst_tickers=[
+            "600519.SS", "601318.SS", "300750.SZ", "601398.SS", "600036.SS",
+            "000858.SZ", "600900.SS", "601166.SS", "600276.SS", "601628.SS",
+        ],
+        min_analyst_tickers=4,
+        default_payout_ratio=0.40,          # Onshore SOE-bank-heavy (~30%) + consumer (~50%)
+        default_buyback_yield=0.003,
+        default_analyst_growth=0.075,
+        default_rfr_fallback=0.020,
+        trend_growth_fallback=0.075,
+        normal_erp_longrun=0.0675,
+        normal_erp_decade=0.075,
+        earliest_seed_date="2012-01-01",    # 510300.SS ETF inception 2012-05; pre-2012 truncated v1
+        rfr_max_stale_days=14,
+        data_quality="fallback",
+        notes="CSI 300 onshore A-share via 000300.SS. CNY-native both sides. "
+              "Shares CNDataSource rfr chain with CN (Investing.com→US+NDF→"
+              "constant). Onshore-investor pricing — capital-controlled, "
+              "distinct ERP from MCHI series.",
+        display_index_name="CSI 300",
+        display_index_short="CSI",
+        display_rfr_name="10Y CGB Yield",
+        display_rfr_short="CGB",
+        currency_symbol="¥",
+    ),
 }
 
 

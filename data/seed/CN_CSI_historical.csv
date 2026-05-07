@@ -1,0 +1,51 @@
+# CN_CSI_historical.csv — CSI 300 onshore annual seed, 2012-12-31 onward
+# (510300.SS Huatai-PineBridge CSI 300 ETF inception 2012-05; pre-2012
+# truncated for v1 because yfinance ^000300.SS only has 4 years.
+# Phase 5 candidate to backfill 2005–2011 from CSI Index Co. archive).
+#
+# Schema (per SHARED_NOTES.md / Agent 3 §4):
+#   date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,
+#   analyst_5yr_growth,payout_ratio,source,notes
+#
+# - Decimals (0.0210, not 2.10). Yields are gross.
+# - Blank fields filled at seed time:
+#     index_level    ← yfinance 000300.SS Dec close (CNY-native onshore)
+#     rfr_rate       ← CN override (shared CGB chain); historical fallback
+#                      to spec.default_rfr_fallback (~2.0%) for all years.
+# - trailing_eps blank → DDM-only seed (FCFE deferred per Agent 3 §3).
+# - analyst_5yr_growth ALWAYS blank → MarketSpec default at seed time.
+#
+# DIVIDEND YIELD SOURCES (hand-keyed annual averages, v1):
+#   2005–2014: CSI Index Co. *CSI 300 Monthly Reports* + Wind data
+#              (where available); CSI 300 inception April 2005.
+#   2015–2024: CSI Index Co. CSI 300 official monthly factsheet
+#              (TTM index dividend yield, December observation).
+#   2025:      510300.SS ETF trailing TTM (Huatai-PineBridge CSI 300 ETF,
+#              CNY-native; cross-check with raw CSI 300 trailing yield).
+# PAYOUT RATIO SOURCES:
+#   Flat 0.40 (CSI 300 onshore is SOE-bank-heavy ~30% + mainland
+#   consumer/property mix ~50% averaging to ~40% aggregate index payout;
+#   higher than offshore MSCI China due to SOE dividend policy).
+# BUYBACK YIELD SOURCES:
+#   Flat 0.003 (onshore A-share buybacks remain de minimis through
+#   2025; share-issuance is the dominant capital-flow direction).
+#
+# v1 limitations: CSI 300 inception April 2005 — no rows pre-2005-12.
+# Historical rfr is constant fallback; does NOT capture CGB curve
+# variation. CSI 300 trailing yield in some early years approximated
+# via index-fund factsheets (raw Wind/CSMAR feeds deferred to Phase 5).
+date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,analyst_5yr_growth,payout_ratio,source,notes
+2012-12-31,,0.0270,0.003,,,,0.40,seed:CN_CSI:csv,510300.SS inception year
+2013-12-31,,0.0270,0.003,,,,0.40,seed:CN_CSI:csv,
+2014-12-31,,0.0220,0.003,,,,0.40,seed:CN_CSI:csv,
+2015-12-31,,0.0190,0.003,,,,0.40,seed:CN_CSI:csv,A-share crash
+2016-12-31,,0.0220,0.003,,,,0.40,seed:CN_CSI:csv,
+2017-12-31,,0.0190,0.003,,,,0.40,seed:CN_CSI:csv,
+2018-12-31,,0.0270,0.003,,,,0.40,seed:CN_CSI:csv,
+2019-12-31,,0.0240,0.003,,,,0.40,seed:CN_CSI:csv,
+2020-12-31,,0.0180,0.003,,,,0.40,seed:CN_CSI:csv,COVID rally
+2021-12-31,,0.0210,0.003,,,,0.40,seed:CN_CSI:csv,
+2022-12-31,,0.0260,0.003,,,,0.40,seed:CN_CSI:csv,
+2023-12-31,,0.0290,0.003,,,,0.40,seed:CN_CSI:csv,
+2024-12-31,,0.0280,0.003,,,,0.40,seed:CN_CSI:csv,
+2025-12-31,,0.0260,0.003,,,,0.40,seed:CN_CSI:csv,
