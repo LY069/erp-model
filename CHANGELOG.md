@@ -9,6 +9,64 @@ the overall delivery plan.
 
 ## [Unreleased]
 
+## [v0.phase3] — 2026-05-06
+
+Developed-market tier: Europe (STOXX 600) and Japan (TOPIX) added as live
+markets. Zero net-new infrastructure — all scaffolding (DataSource protocol,
+seed CSV pattern, Flask market routing, DOM relabeller) was built in Phases
+1–2.1; Phase 3 is config + data.
+
+### Added
+- `markets_config.py`: `EU` and `JP` `MarketSpec` entries with fully
+  populated display fields (STOXX/Bund/€ and TOPIX/JGB/¥). All downstream
+  label injection and API routing picks these up automatically.
+- `data/seed/EU_historical.csv`: 28 rows (1998-12-31 → 2025-12-31). STOXX
+  600 div yields hand-keyed from STOXX Ltd. factsheets and ECB Statistical
+  Warehouse. Index level pre-filled for 1998–2003 (STOXX Ltd. historical
+  stats; Yahoo ^STOXX begins ~Apr 2004); 2004+ filled at seed time.
+- `data/seed/JP_historical.csv`: 41 rows (1985-12-31 → 2025-12-31). TOPIX
+  div yields hand-keyed from TSE Annual Statistics Book. Index level
+  pre-filled for 1985–1999 (TSE Factbook; Yahoo ^TOPX unreliable for this
+  era); 2000+ uses ^N225 fallback (^TOPX unavailable on yfinance).
+  Buyback yield: 0.000 (1985–2012), 0.005 (2013–2020, Abenomics),
+  0.015 (2021+, TSE PBR<1 reform).
+- `seed_historical.py`: `_fetch_ftse_yearend_closes` renamed to
+  `_fetch_yearend_closes(ticker_sym, ...)` (parameterised). New generic
+  `seed_csv_market(market_code, ...)` replaces the UK-specific seeder;
+  `seed_uk()` delegates to it. Added `seed_eu()` and `seed_jp()` thin
+  wrappers. JP terminal-g floor `max(rfr, 0.005)` applied per Agent 2 §6a.
+  JP fallback: if `^TOPX` returns < ½ expected years, supplements from
+  `^N225` (scale-invariant for DDM ERP). Argparse `--market` choices
+  extended to `[US, UK, EU, JP]`.
+- `data_sources/yahoo_fred.py`: `fetch_index_level` gains JP-specific
+  `^N225` fallback when `^TOPX` is unavailable. Fallback is flagged in
+  `FetchResult.is_fallback` and a warning is emitted.
+- `erp_dashboard.html`: EU and JP `<option>` elements un-disabled (removed
+  `disabled` attribute and "(Phase 3+)" suffix).
+
+### Validation
+- EU seeded 28/28 rows (DDM); ERPs 3.25%–6.48%; live FCFE ERP 6.89%.
+- JP seeded 41/41 rows (DDM); ERPs post-2020 3.99%–4.23%; live FCFE ERP
+  4.93% (7 bp below [5%, 7.5%] target; see v1 shortfalls below).
+- US `/api/latest` (no market) ≡ `/api/latest?market=US` byte-identical. ✓
+- `__ERP_LABELS__` in dashboard includes all four markets. ✓
+- No 500s cycling US → UK → EU → JP in the UI. ✓
+
+### Known v1 Shortfalls (documented)
+- EU rfr: FRED `IRLTLT01DEM156N` SSL error on this machine → fallback 2.5%.
+  All EU seed rows and live update use 2.5% Bund proxy.
+- JP rfr: FRED `IRLTLT01JPM156N` same SSL error → fallback 0.5%.
+- JP live div yield: `EWJ` (iShares MSCI Japan) reports 0.79% vs actual
+  TOPIX ~2.2%. The ETF's USD-hedged structure compresses the reported yield.
+  Contributes to JP live ERP landing at 4.93% (just below 5.0% criterion).
+- JP historical seed: `default_analyst_growth=0.05` flat for all years.
+  JP 2020-12-31 ERP = 2.91% vs criterion [5.5%, 7.0%]. Post-COVID analyst
+  consensus was ~20–30% — not seeded for historical rows per Agent 2 §4.
+- Buyback yield (EU/JP) and payout ratio are constants, not yearly series.
+- Trailing EPS not seeded historically → DDM-only seed rows; FCFE deferred.
+- `^TOPX` fully unavailable on yfinance (shows "possibly delisted"); all JP
+  index levels use `^N225` scale. Level cancels in DDM — ERP unaffected.
+
 ## [v0.phase2.1] — 2026-05-06
 
 Per-market UI label rewrite. Phase 2 routed `/api/*` calls correctly to the

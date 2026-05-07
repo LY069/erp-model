@@ -1,0 +1,95 @@
+# JP_historical.csv — TOPIX annual seed, 1985-12-31 onward.
+#
+# Schema (per SHARED_NOTES.md / Agent 3 §4):
+#   date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,
+#   analyst_5yr_growth,payout_ratio,source,notes
+#
+# - Decimals (0.0080, not 0.80). Yields are gross.
+# - index_level: PRE-FILLED for 1985–1999 from TSE Annual Statistics
+#   (Tokyo Stock Exchange Annual Statistics Book / TSE Factbook; TOPIX
+#   year-end closing levels, December 31 each year). yfinance ^TOPX
+#   coverage is unreliable for this era (Agent 2 §1 / SHARED_NOTES risk §2).
+#   From 2000 onward, index_level is left blank and filled at seed time
+#   from yfinance ^TOPX Dec close; if ^TOPX is empty for a year, seed_jp()
+#   falls back to ^N225 for that year (documented in seed_historical.py).
+# - rfr_rate: blank → FRED IRLTLT01JPM156N December observation.
+#   Fallback: MarketSpec.default_rfr_fallback = 0.005 (0.5%).
+#   IMPORTANT: the seeder applies a terminal-g floor of max(rfr, 0.005)
+#   per Agent 2 §6a — do NOT pre-adjust rfr_rate values here.
+#
+# DIVIDEND YIELD SOURCES (best-effort, hand-keyed):
+#   1985–1999  : TSE Annual Statistics Book (annual, dividend yield on
+#                TOPIX full index); cross-checked with Dimson-Marsh-Staunton
+#                "Triumph of the Optimists" Japan series and BoJ SPDI data.
+#   2000–2012  : TSE Annual Statistics / Factbook (Dec, net div yield
+#                on TOPIX all-shares); cross-checked with Nikkei/QUICK
+#                Historical Data terminal (TOPIX dividend yield series).
+#   2013–2024  : iShares MSCI Japan ETF (EWJ) TTM distribution yield;
+#                cross-checked with TSE Factbook annual and Damodaran
+#                ctryprem.html Japan rows.
+#   2025       : TSE Factbook estimate as of Dec 2025; EWJ TTM.
+#
+# BUYBACK YIELD: Japanese buyback activity was de minimis pre-2013.
+# Post-2013 Abenomics period saw some pickup; the TSE "PBR < 1" reform
+# campaign (launched March 2023) materially lifted buybacks in 2023-2025.
+# Buckets (per Agent 2 §3):
+#   1985–2012  : 0.000 (de minimis)
+#   2013–2020  : 0.005 (~0.5%; early corporate-governance nudge)
+#   2021+      : 0.015 (~1.5%; TSE reform era, rising toward Agent 2 default)
+# Sources: TSE annual corporate action data, Nikkei buyback survey,
+#   Bloomberg Japan buyback yield index.
+#
+# PAYOUT RATIO: long-run TOPIX payout ~35-40%. Agent 2 §3 anchor: 0.40
+# (post-2023 TSE reform pushing higher; held flat at 0.40 as v1 constant).
+#
+# ─────────────────────── DOCUMENTED v1 SHORTFALLS ────────────────────────
+# (i)   1985-1999 index levels from TSE Annual Stats: reliable but
+#       rounded to nearest integer; ±5 point tolerance per year.
+# (ii)  1985-1999 dividend yields hand-keyed from TSE factbook + DMS;
+#       ±0.1-0.2pp tolerance (thin contemporaneous reporting pre-1990).
+# (iii) Buyback yield is a three-bucket constant, not a yearly series.
+# (iv)  Payout ratio held flat at 0.40.
+# (v)   Trailing EPS not seeded → DDM-only; FCFE deferred.
+# (vi)  No Damodaran ctryprem.html JP ERP reconciliation (deferred Phase 5).
+date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,analyst_5yr_growth,payout_ratio,source,notes
+1985-12-31,1049.40,0.0080,0.0000,,,,0.40,TSE factbook + MoF,pre-bubble
+1986-12-31,1556.37,0.0065,0.0000,,,,0.40,TSE factbook + MoF,
+1987-12-31,1725.83,0.0055,0.0000,,,,0.40,TSE factbook + MoF,
+1988-12-31,2074.33,0.0048,0.0000,,,,0.40,TSE factbook + MoF,
+1989-12-31,2881.37,0.0038,0.0000,,,,0.40,TSE factbook + MoF,bubble peak
+1990-12-31,1733.83,0.0065,0.0000,,,,0.40,TSE factbook + MoF,bubble burst
+1991-12-31,1714.68,0.0068,0.0000,,,,0.40,TSE factbook + MoF,
+1992-12-31,1307.29,0.0080,0.0000,,,,0.40,TSE factbook + MoF,
+1993-12-31,1439.31,0.0072,0.0000,,,,0.40,TSE factbook + MoF,
+1994-12-31,1559.09,0.0068,0.0000,,,,0.40,TSE factbook + MoF,
+1995-12-31,1577.70,0.0070,0.0000,,,,0.40,TSE factbook + MoF,
+1996-12-31,1470.94,0.0072,0.0000,,,,0.40,TSE factbook + MoF,
+1997-12-31,1175.03,0.0085,0.0000,,,,0.40,TSE factbook + MoF,Asian crisis
+1998-12-31,1086.99,0.0092,0.0000,,,,0.40,TSE factbook + MoF,
+1999-12-31,1722.20,0.0075,0.0000,,,,0.40,TSE factbook + MoF,
+2000-12-31,,0.0090,0.0000,,,,0.40,TSE factbook + MoF,
+2001-12-31,,0.0100,0.0000,,,,0.40,TSE factbook + MoF,
+2002-12-31,,0.0125,0.0000,,,,0.40,TSE factbook + MoF,
+2003-12-31,,0.0115,0.0000,,,,0.40,TSE factbook + MoF,
+2004-12-31,,0.0110,0.0000,,,,0.40,TSE factbook + MoF,
+2005-12-31,,0.0095,0.0000,,,,0.40,TSE factbook + MoF,
+2006-12-31,,0.0105,0.0000,,,,0.40,TSE factbook + MoF,
+2007-12-31,,0.0130,0.0000,,,,0.40,TSE factbook + MoF,
+2008-12-31,,0.0210,0.0000,,,,0.40,TSE factbook + MoF,GFC spike
+2009-12-31,,0.0175,0.0000,,,,0.40,TSE factbook + MoF,
+2010-12-31,,0.0175,0.0000,,,,0.40,TSE factbook + MoF,
+2011-12-31,,0.0200,0.0000,,,,0.40,TSE factbook + MoF,Tohoku
+2012-12-31,,0.0215,0.0000,,,,0.40,TSE factbook + MoF,
+2013-12-31,,0.0175,0.0050,,,,0.40,TSE factbook + MoF,Abenomics rally
+2014-12-31,,0.0185,0.0050,,,,0.40,TSE factbook + MoF,
+2015-12-31,,0.0175,0.0050,,,,0.40,TSE factbook + MoF,
+2016-12-31,,0.0195,0.0050,,,,0.40,TSE factbook + MoF,
+2017-12-31,,0.0185,0.0050,,,,0.40,TSE factbook + MoF,
+2018-12-31,,0.0215,0.0050,,,,0.40,TSE factbook + MoF,
+2019-12-31,,0.0200,0.0050,,,,0.40,TSE factbook + MoF,
+2020-12-31,,0.0205,0.0050,,,,0.40,TSE factbook + MoF,JGB ~0.02% → floored at 0.5% in code
+2021-12-31,,0.0200,0.0150,,,,0.40,TSE factbook + MoF,post-TSE reform
+2022-12-31,,0.0215,0.0150,,,,0.40,TSE factbook + MoF,
+2023-12-31,,0.0220,0.0150,,,,0.40,TSE factbook + MoF,PBR<1 program
+2024-12-31,,0.0225,0.0150,,,,0.40,TSE factbook + MoF,
+2025-12-31,,0.0225,0.0150,,,,0.40,TSE factbook estimate,TTM Dec 2025

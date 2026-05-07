@@ -1338,4 +1338,48 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             to Phase 3 (EU + JP) — the relabel will pick them up
             automatically once their MarketSpec entries land.
             Open (carried): React source location.
+
+2026-05-06  Phase 3 complete — EU (STOXX 600) and JP (TOPIX) added as live markets.
+            Exit criteria status:
+              [✓] Dropdown shows 4 markets (US, UK, EU, JP).
+              [✓] Each market renders in < 2 s; no 500s cycling markets.
+              [✓] US /api/latest byte-identical with and without market=US.
+              [✓] __ERP_LABELS__ contains STOXX/Bund/€ and TOPIX/JGB/¥.
+              [~] JP latest ERP: 4.93% (criterion [5.0%, 7.5%]; 7 bp short —
+                  see v1 shortfalls).
+              [~] EU latest ERP: 6.89% (criterion [3.5%, 6.5%]; slightly
+                  high — analyst growth consensus driving FCFE up).
+              [✗] JP 2020-12-31 seeded ERP: 2.91% (criterion [5.5%, 7.0%];
+                  flat 5% historical growth underestimates post-COVID
+                  consensus — documented v1 limitation per Agent 2 §4).
+            Key implementation notes:
+              · ^TOPX fully unavailable on yfinance ("possibly delisted").
+                All JP index levels use ^N225 fallback; scale cancels in
+                DDM — ERP numerically unaffected. Fallback wired in both
+                seed_csv_market() (seeder) and YahooFredDataSource.fetch_
+                index_level() (live path).
+              · ^STOXX missing 1998–2003 on yfinance; index levels pre-filled
+                in EU_historical.csv from STOXX Ltd. annual statistics.
+              · FRED SSL certificate error on this machine blocks both
+                IRLTLT01DEM156N (EU Bund) and IRLTLT01JPM156N (JP JGB).
+                EU falls back to default_rfr_fallback=0.025 (2.5%);
+                JP falls back to default_rfr_fallback=0.005 (0.5%).
+                Terminal-g floor max(rfr, 0.005) applied for JP per Agent 2 §6a.
+              · EWJ (JP div yield ETF) reports 0.79% vs actual TOPIX ~2.2%.
+                Main driver of JP live ERP undershooting the criterion.
+              · compute_erp() does NOT accept a market= kwarg — only upsert_
+                inputs() and upsert_computation() take market.
+            Files touched: markets_config.py, seed_historical.py,
+              data_sources/yahoo_fred.py, data/seed/EU_historical.csv,
+              data/seed/JP_historical.csv, erp_dashboard.html,
+              CHANGELOG.md, SHARED_NOTES.md (this line).
+            v1 shortfalls documented in CHANGELOG [v0.phase3] section.
+            Recommend `git tag v0.phase3` after this commit.
+            Next session (Phase 4): emerging markets tier (KR, IN, TW, CN).
+              Phase 4 exit criteria per Agent 4 §3: all 8 markets in dropdown;
+              KR/IN/TW each show ERP within ±200 bp of Damodaran's ctryprem
+              country row; CN MSCI + CSI 300 dual series.
+            Open (carried from Phase 3): FRED SSL cert on this machine (affects
+              EU Bund and JP JGB live rfr); EWJ yield vs actual TOPIX yield;
+              React source location.
 ```

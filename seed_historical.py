@@ -164,10 +164,10 @@ def seed_us(xls_path: Path, start_year: int = 1961, verbose: bool = True) -> int
 # UK (new path — FTSE 100 + FRED 10Y Gilt, v1 bootstrap)
 # ─────────────────────────────────────────────────────────────────────
 
-def _fetch_ftse_yearend_closes(start_year: int, end_year: int) -> dict[int, float]:
-    """Return {year: Dec close} for ^FTSE on Yahoo, year ∈ [start_year, end_year]."""
+def _fetch_yearend_closes(ticker_sym: str, start_year: int, end_year: int) -> dict[int, float]:
+    """Return {year: Dec close} for the given Yahoo ticker, year ∈ [start_year, end_year]."""
     import yfinance as yf
-    ticker = yf.Ticker("^FTSE")
+    ticker = yf.Ticker(ticker_sym)
     hist = ticker.history(
         start=f"{start_year}-01-01",
         end=f"{end_year + 1}-01-15",
@@ -175,7 +175,7 @@ def _fetch_ftse_yearend_closes(start_year: int, end_year: int) -> dict[int, floa
         auto_adjust=False,
     )
     if hist.empty:
-        raise RuntimeError("yfinance returned no ^FTSE history")
+        return {}   # caller handles empty gracefully
     closes = hist["Close"].copy()
     closes.index = pd.to_datetime(closes.index).tz_localize(None)
     out: dict[int, float] = {}
@@ -210,6 +210,8 @@ def _fetch_fred_yearend_rates(series_id: str, start_year: int, end_year: int,
 
 
 UK_SEED_CSV = Path(__file__).parent / "data" / "seed" / "UK_historical.csv"
+EU_SEED_CSV = Path(__file__).parent / "data" / "seed" / "EU_historical.csv"
+JP_SEED_CSV = Path(__file__).parent / "data" / "seed" / "JP_historical.csv"
 
 
 def _load_uk_seed_csv(path: Path) -> pd.DataFrame:
@@ -239,73 +241,96 @@ def _csv_value(row: pd.Series, col: str):
         return None
 
 
-def seed_uk(start_year: int = 1990, end_year: int | None = None,
-            verbose: bool = True, csv_path: Path | None = None) -> int:
+def seed_csv_market(
+    market_code: str,
+    start_year: int | None = None,
+    end_year: int | None = None,
+    verbose: bool = True,
+    csv_path: Path | None = None,
+) -> int:
     """
-    Seed UK history from data/seed/UK_historical.csv (BoE / Barclays / FTSE
-    Russell sourced annual values for dividend_yield, buyback_yield,
-    payout_ratio). index_level filled from yfinance ^FTSE Dec close,
-    rfr_rate from FRED IRLTLT01GBM156N Dec observation.
+    Generic CSV-driven seeder for any market with a data/seed/<CODE>_historical.csv.
 
-    See the CSV header for documented v1 shortfalls.
+    Per-row resolution order:
+      index_level   : CSV pre-filled → yfinance spec.yahoo_index Dec close
+                      (JP: ^TOPX sparse years supplemented by ^N225)
+      rfr_rate      : CSV pre-filled → FRED spec.fred_rfr_series Dec obs
+                      → spec.default_rfr_fallback (stale_flag implicit)
+      div_yield     : CSV → spec.default_payout_ratio * 0.05 as last resort
+      buyback_yield : CSV → spec.default_buyback_yield
+      analyst_5yr_growth: CSV → spec.default_analyst_growth
+      payout_ratio  : CSV → spec.default_payout_ratio
+
+    JP-specific: terminal-g floor max(rfr, 0.005) applied per Agent 2 §6a.
+
+    See each market's CSV header for documented v1 shortfalls.
     """
     init_db()
-    spec = get_market("UK")
+    spec = get_market(market_code)
     api_key = config.FRED_API_KEY
 
-    csv_path = csv_path or UK_SEED_CSV
-    print(f"  Loading UK seed CSV: {csv_path}")
-    seed_df = _load_uk_seed_csv(csv_path)
+    _default_csv = Path(__file__).parent / "data" / "seed" / f"{market_code}_historical.csv"
+    csv_path = csv_path or _default_csv
+    print(f"  Loading {market_code} seed CSV: {csv_path}")
+    seed_df = _load_uk_seed_csv(csv_path)   # reuse existing CSV loader (generic)
 
-    end_year = end_year or (date.today().year - 1)
+    _start = start_year or int(spec.earliest_seed_date[:4])
+    _end   = end_year   or (date.today().year - 1)
     seed_df = seed_df[
-        (pd.to_datetime(seed_df["date"]).dt.year >= start_year) &
-        (pd.to_datetime(seed_df["date"]).dt.year <= end_year)
+        (pd.to_datetime(seed_df["date"]).dt.year >= _start) &
+        (pd.to_datetime(seed_df["date"]).dt.year <= _end)
     ].copy()
     if seed_df.empty:
-        print(f"  No CSV rows in range {start_year}–{end_year}; nothing to seed.")
+        print(f"  No CSV rows in range {_start}–{_end}; nothing to seed.")
         return 0
 
-    print(f"  Fetching ^FTSE year-end closes {start_year}–{end_year} ...")
-    ftse = _fetch_ftse_yearend_closes(start_year, end_year)
+    print(f"  Fetching {spec.yahoo_index} year-end closes {_start}–{_end} ...")
+    index_closes = _fetch_yearend_closes(spec.yahoo_index, _start, _end)
+
+    # JP fallback: ^TOPX history is spotty for early years; supplement with ^N225
+    if market_code == "JP" and len(index_closes) < (_end - _start) // 2:
+        print("  ^TOPX data sparse — supplementing missing years from ^N225 ...")
+        n225 = _fetch_yearend_closes("^N225", _start, _end)
+        for yr, val in n225.items():
+            if yr not in index_closes:
+                index_closes[yr] = val
 
     if api_key:
         print(f"  Fetching FRED {spec.fred_rfr_series} year-end (Dec) rates ...")
         try:
-            gilt = _fetch_fred_yearend_rates(spec.fred_rfr_series, start_year,
-                                             end_year, api_key)
+            rfr_map = _fetch_fred_yearend_rates(spec.fred_rfr_series, _start, _end, api_key)
         except Exception as e:
             print(f"  FRED fetch failed ({e}); falling back to "
                   f"MarketSpec.default_rfr_fallback={spec.default_rfr_fallback}")
-            gilt = {}
+            rfr_map = {}
     else:
         print("  FRED_API_KEY not set; using MarketSpec.default_rfr_fallback "
               f"({spec.default_rfr_fallback}) for all years (stale_flag=1).")
-        gilt = {}
+        rfr_map = {}
 
     seeded = 0
     skipped: list[tuple[int, str]] = []
     rfr_fallback_years: list[int] = []
 
-    print(f"\n  Seeding UK from CSV ({len(seed_df)} rows, DDM) ...")
+    print(f"\n  Seeding {market_code} from CSV ({len(seed_df)} rows, DDM) ...")
 
     for _, row in seed_df.iterrows():
         dt = row["date"]
         yr = int(pd.Timestamp(dt).year)
 
-        # index_level: prefer CSV → fallback to yfinance Dec close
+        # index_level: prefer CSV pre-filled → yfinance Dec close
         index_level = _csv_value(row, "index_level")
         if index_level is None:
-            if yr not in ftse:
-                skipped.append((yr, "no ^FTSE Dec close and no CSV index_level"))
+            if yr not in index_closes:
+                skipped.append((yr, f"no {spec.yahoo_index} Dec close and no CSV index_level"))
                 continue
-            index_level = ftse[yr]
+            index_level = index_closes[yr]
 
         # rfr_rate: prefer CSV → FRED → MarketSpec default (stale)
         rfr_rate = _csv_value(row, "rfr_rate")
         if rfr_rate is None:
-            if yr in gilt:
-                rfr_rate = gilt[yr]
+            if yr in rfr_map:
+                rfr_rate = rfr_map[yr]
             elif spec.default_rfr_fallback is not None:
                 rfr_rate = spec.default_rfr_fallback
                 rfr_fallback_years.append(yr)
@@ -313,8 +338,11 @@ def seed_uk(start_year: int = 1990, end_year: int | None = None,
                 skipped.append((yr, "no rfr (FRED missing, no fallback)"))
                 continue
 
-        # CSV-supplied per-row inputs (with MarketSpec defaults if blank)
-        div_y    = _csv_value(row, "dividend_yield") or 0.035
+        # JP: terminal-g floor max(rfr, 0.5%) per Agent 2 §6a
+        if market_code == "JP":
+            rfr_rate = max(rfr_rate, 0.005)
+
+        div_y    = _csv_value(row, "dividend_yield") or spec.default_payout_ratio * 0.05
         buyback  = _csv_value(row, "buyback_yield")
         if buyback is None:
             buyback = spec.default_buyback_yield
@@ -325,7 +353,8 @@ def seed_uk(start_year: int = 1990, end_year: int | None = None,
         trail_eps = _csv_value(row, "trailing_eps")  # may be None
 
         total_yield = div_y + buyback
-        src_tag = str(row.get("source", "seed:UK:csv")).strip() or "seed:UK:csv"
+        src_tag = str(row.get("source", f"seed:{market_code}:csv")).strip() \
+                  or f"seed:{market_code}:csv"
 
         upsert_inputs(
             dt=dt,
@@ -337,7 +366,7 @@ def seed_uk(start_year: int = 1990, end_year: int | None = None,
             source=src_tag,
             trailing_eps=trail_eps,
             payout_ratio=payout,
-            market="UK",
+            market=market_code,
         )
 
         try:
@@ -361,15 +390,15 @@ def seed_uk(start_year: int = 1990, end_year: int | None = None,
                 method_model="ddm",
                 annual_growth_rates=result.annual_growth_rates,
                 cash_flows=result.cash_flows,
-                market="UK",
+                market=market_code,
             )
             seeded += 1
             if verbose:
-                tag = "fallback-rfr" if yr in rfr_fallback_years else ""
-                print(f"    {yr}: FTSE={index_level:>8.2f}  "
-                      f"Gilt={rfr_rate:>6.2%}  divY={div_y:>5.2%}  "
+                rfr_tag = " [fallback-rfr]" if yr in rfr_fallback_years else ""
+                print(f"    {yr}: idx={index_level:>9.2f}  "
+                      f"rfr={rfr_rate:>6.2%}  divY={div_y:>5.2%}  "
                       f"ERP={result.implied_erp:>6.2%}  "
-                      f"r={result.implied_r:>6.2%}  {tag}")
+                      f"r={result.implied_r:>6.2%}{rfr_tag}")
         except Exception as e:
             skipped.append((yr, f"solver: {e}"))
 
@@ -384,12 +413,40 @@ def seed_uk(start_year: int = 1990, end_year: int | None = None,
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Per-market thin wrappers (UK / EU / JP)
+# ─────────────────────────────────────────────────────────────────────
+
+def seed_uk(start_year: int = 1990, end_year: int | None = None,
+            verbose: bool = True, csv_path: Path | None = None) -> int:
+    """Seed UK from data/seed/UK_historical.csv. Delegates to seed_csv_market."""
+    return seed_csv_market("UK", start_year=start_year, end_year=end_year,
+                           verbose=verbose, csv_path=csv_path)
+
+
+def seed_eu(start_year: int = 1998, end_year: int | None = None,
+            verbose: bool = True) -> int:
+    """Seed EU (STOXX 600) from data/seed/EU_historical.csv."""
+    return seed_csv_market("EU", start_year=start_year, end_year=end_year,
+                           verbose=verbose)
+
+
+def seed_jp(start_year: int = 1985, end_year: int | None = None,
+            verbose: bool = True) -> int:
+    """Seed JP (TOPIX) from data/seed/JP_historical.csv.
+    ^TOPX is supplemented by ^N225 for years with sparse yfinance coverage.
+    Terminal-g floor max(rfr, 0.5%) applied per Agent 2 §6a.
+    """
+    return seed_csv_market("JP", start_year=start_year, end_year=end_year,
+                           verbose=verbose)
+
+
+# ─────────────────────────────────────────────────────────────────────
 # CLI
 # ─────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Seed DB with historical ERP data")
-    parser.add_argument("--market", default="US", choices=["US", "UK"],
+    parser.add_argument("--market", default="US", choices=["US", "UK", "EU", "JP"],
                         help="Market to seed (default: US)")
     parser.add_argument("--file", help="(US only) Path to local histimpl.xls")
     parser.add_argument("--start", type=int, default=None,
@@ -409,6 +466,12 @@ def main():
         seed_us(xls_path, start_year=args.start or 1961, verbose=not args.quiet)
     elif args.market == "UK":
         seed_uk(start_year=args.start or 1990, end_year=args.end,
+                verbose=not args.quiet)
+    elif args.market == "EU":
+        seed_eu(start_year=args.start or 1998, end_year=args.end,
+                verbose=not args.quiet)
+    elif args.market == "JP":
+        seed_jp(start_year=args.start or 1985, end_year=args.end,
                 verbose=not args.quiet)
 
 

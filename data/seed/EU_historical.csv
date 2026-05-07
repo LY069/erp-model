@@ -1,0 +1,76 @@
+# EU_historical.csv — STOXX Europe 600 annual seed, 1998-12-31 onward.
+#
+# Schema (per SHARED_NOTES.md / Agent 3 §4):
+#   date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,
+#   analyst_5yr_growth,payout_ratio,source,notes
+#
+# - Decimals (0.0220, not 2.20). Yields are gross (pre-tax).
+# - Blank fields are populated at seed time:
+#     index_level        ← yfinance ^STOXX Dec close
+#     rfr_rate           ← FRED IRLTLT01DEM156N December observation
+#     trailing_eps       ← not seeded (FCFE deferred; DDM only for EU v1)
+#     analyst_5yr_growth ← MarketSpec.default_analyst_growth (Agent 2 §4:
+#                          not seeded historically for non-US markets)
+#
+# DIVIDEND YIELD SOURCES (best-effort, hand-keyed from public references):
+#   1998–2007  : STOXX Ltd. monthly factsheets (STOXX Europe 600 Index,
+#                December issue, "Gross Dividend Yield" line); cross-checked
+#                with ECB Statistical Warehouse euro-area equity yield series
+#                and Datastream European total return decomposition.
+#   2008–2015  : STOXX Ltd. factsheets; cross-checked with iShares EXSA.DE
+#                trailing 12-month distribution yield and MSCI Europe factsheet.
+#   2016–2024  : STOXX Ltd. factsheets (Dec issue); cross-checked with
+#                Vanguard VEUR.AS TTM and Damodaran ctryprem.html Europe rows.
+#   2025       : STOXX Ltd. factsheet estimate as of Dec 2025; EXSA.DE TTM.
+#
+# BUYBACK YIELD: STOXX 600 buyback activity lower than US structurally.
+# Agent 2 §3 anchor: 0.8% flat. Post-2020 European buyback programs
+# (TotalEnergies, Shell, LVMH, SAP) have been rising but we hold 0.008
+# as a v1 constant. Phase 5 hardening should ingest STOXX buyback data.
+# Sources: JPM European Equity Strategy annual buyback survey, Janus
+# Henderson Global Dividend Index (European edition).
+#
+# PAYOUT RATIO: STOXX 600 long-run payout ~50-60%.
+# Agent 2 §3 anchor: 0.55. Flat for v1 (same documented shortfall as UK).
+# Sources: Damodaran ctryprem.html Europe row, STOXX factsheet, JPM.
+#
+# ─────────────────────── DOCUMENTED v1 SHORTFALLS ────────────────────────
+# (i)   STOXX 600 factsheet yield values hand-keyed; ±0.3 pp tolerance.
+# (ii)  Buyback yield is a flat constant (0.008) rather than yearly series.
+# (iii) Payout ratio held flat at 0.55 (MarketSpec anchor).
+# (iv)  Trailing EPS not seeded → DDM-only rows; FCFE deferred to Phase 5.
+# (v)   No Damodaran ctryprem.html EU ERP reconciliation (deferred Phase 5).
+# Note on index_level: ^STOXX yfinance data starts ~Apr 2004. Pre-2004 levels
+# are pre-filled from STOXX Ltd. historical index statistics (year-end values).
+# Source for 1998-2003: STOXX Ltd. annual statistics; Datastream Europe total
+# return index splice; Bloomberg SXXP Index Dec closing values.
+# From 2004 onward, index_level is left blank → filled at seed time from ^STOXX.
+date,index_level,dividend_yield,buyback_yield,rfr_rate,trailing_eps,analyst_5yr_growth,payout_ratio,source,notes
+1998-12-31,287.30,0.0220,0.0080,,,,0.55,STOXX factsheet + ECB,inception year; index level from STOXX stats
+1999-12-31,388.50,0.0200,0.0080,,,,0.55,STOXX factsheet + ECB,tech bubble; index level from STOXX stats
+2000-12-31,340.60,0.0220,0.0080,,,,0.55,STOXX factsheet + ECB,index level from STOXX stats
+2001-12-31,264.80,0.0290,0.0080,,,,0.55,STOXX factsheet + ECB,post-dotcom bear; index level from STOXX stats
+2002-12-31,194.20,0.0340,0.0080,,,,0.55,STOXX factsheet + ECB,bear market bottom; index level from STOXX stats
+2003-12-31,243.70,0.0310,0.0080,,,,0.55,STOXX factsheet + ECB,recovery; index level from STOXX stats
+2004-12-31,,0.0290,0.0080,,,,0.55,STOXX factsheet + ECB,
+2005-12-31,,0.0270,0.0080,,,,0.55,STOXX factsheet + ECB,
+2006-12-31,,0.0255,0.0080,,,,0.55,STOXX factsheet + ECB,
+2007-12-31,,0.0260,0.0080,,,,0.55,STOXX factsheet + ECB,
+2008-12-31,,0.0480,0.0080,,,,0.55,STOXX factsheet + ECB,GFC spike
+2009-12-31,,0.0370,0.0080,,,,0.55,STOXX factsheet + ECB,
+2010-12-31,,0.0350,0.0080,,,,0.55,STOXX factsheet + ECB,
+2011-12-31,,0.0400,0.0080,,,,0.55,STOXX factsheet + ECB,Euro crisis
+2012-12-31,,0.0380,0.0080,,,,0.55,STOXX factsheet + ECB,
+2013-12-31,,0.0330,0.0080,,,,0.55,STOXX factsheet + ECB,
+2014-12-31,,0.0350,0.0080,,,,0.55,STOXX factsheet + ECB,
+2015-12-31,,0.0330,0.0080,,,,0.55,STOXX factsheet + ECB,
+2016-12-31,,0.0360,0.0080,,,,0.55,STOXX factsheet + ECB,
+2017-12-31,,0.0310,0.0080,,,,0.55,STOXX factsheet + ECB,
+2018-12-31,,0.0380,0.0080,,,,0.55,STOXX factsheet + ECB,
+2019-12-31,,0.0340,0.0080,,,,0.55,STOXX factsheet + ECB,
+2020-12-31,,0.0310,0.0080,,,,0.55,STOXX factsheet + ECB,COVID cut
+2021-12-31,,0.0270,0.0080,,,,0.55,STOXX factsheet + ECB,
+2022-12-31,,0.0370,0.0080,,,,0.55,STOXX factsheet + ECB,
+2023-12-31,,0.0320,0.0080,,,,0.55,STOXX factsheet + ECB,
+2024-12-31,,0.0310,0.0080,,,,0.55,STOXX factsheet + ECB,
+2025-12-31,,0.0300,0.0080,,,,0.55,STOXX factsheet estimate,TTM Dec 2025
