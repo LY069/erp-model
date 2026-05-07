@@ -1427,4 +1427,65 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
               · 2000–2007 JP index_level still uses ^N225 scale (no free
                 TOPIX source for that span; scale-invariant for ERP).
               · React source location (cosmetic — no Phase 4 blocker).
+
+2026-05-07  Pre-Phase-4 housekeeping (tagged v0.phase3.2).
+            Two environmental fixes plus one bundle-shim landed between
+            Phase 3.1 and Phase 4 — no architectural changes.
+
+            (1) FRED SSL cert fixed.
+                python.org Python 3.14 framework ships without linking the
+                system CA bundle, so urllib HTTPS calls (used by fredapi)
+                hit CERTIFICATE_VERIFY_FAILED while requests-based calls
+                (yfinance) sailed through. Ran the official
+                  bash "/Applications/Python 3.14/Install Certificates.command"
+                which symlinks the framework's openssl/cert.pem to certifi.
+                Result: IRLTLT01JPM156N (JGB) and IRLTLT01DEM156N (Bund)
+                both fetch real values now (2.345% and 2.905% as of
+                Mar 2026); EU and JP no longer fall back to 0.025/0.005.
+
+            (2) Re-seeded EU + JP and refreshed live rows so all post-Phase-1
+                rfr values are FRED-sourced rather than fallback constants:
+                  · EU 28/28 rows: rfr now spans -0.62% (2019 NIRP) to
+                    4.89% (2000); historical ERPs 3.10%–6.42%.
+                  · JP 41/41 rows: rfr captures bubble peak 1989–1992
+                    (5.5%–6.4%), BoJ ZIRP era 2014–2022 (floored 0.5%
+                    per Agent 2 §6a), and post-YCC exit 2023+ rising.
+                    1985–1988 still falls back (FRED IRLTLT01JPM156N
+                    series begins 1989).
+                  · Live: EU ERP 6.77% (was 6.82% with 2.5% fallback);
+                    JP ERP 4.77% (was 4.93% with 0.5% fallback).
+
+            (3) Bundle field-name shim (commit 6ff888b).
+                Bug: the dashboard "10Y rfr" card and the index-level card
+                showed em-dash for ALL markets (including US — pre-existing
+                since Phase 1 but never noticed because calculated cards
+                rendered fine). Compiled React bundle was built before
+                Phase 1's index_level/rfr_rate rename and reads the legacy
+                names sp500_level / tbond_rate / tbond_10yr_rate / tbond.
+                The bundle inconsistently uses three different keys for
+                rfr depending on the page: tbond_10yr_rate (dashboard),
+                tbond_rate (history/breakeven tables), tbond (chart series).
+                Fix: server.py adds a LEGACY_FIELD_ALIASES helper called
+                from /api/latest, /api/history, /api/update — mirrors
+                canonical names to all known legacy keys. Canonical names
+                unchanged; consumers reading them keep working.
+                When the bundle is eventually rebuilt, LEGACY_FIELD_ALIASES
+                shrinks to {} with no other code change.
+                Verified all 4 markets now show real rfr + index values:
+                US T-Bond 4.36% / UK Gilt 4.50% / EU Bund 2.91% / JP JGB 2.35%.
+
+            Files touched: server.py (bundle shim only — fields (1)+(2) are
+              data refreshes, not code).
+            Phase 4 readiness: ✅ green. All 4 markets clean end-to-end;
+              FRED-based rfr now reliable for KR/IN/TW (CN uses ChinaBond
+              and won't depend on FRED). Override pattern proven in
+              data_sources/overrides/jp.py — drop-in template for CN.
+            Carried open issues:
+              · 2000–2007 JP index_level scale (cosmetic).
+              · React source location (cosmetic).
+              · Dashboard PAYOUT RATIO form input shows 77.85% for all
+                markets (US default) instead of MarketSpec.default_payout_ratio.
+                API uses the correct value when no form input is supplied;
+                the input placeholder is a bundle-side hardcode. Cosmetic.
+              · Damodaran ctryprem reconciliation (Phase 5).
 ```
