@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ERP Snapshot — 9 Markets</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --surface: #ffffff;
+      --surface-alt: #1f2937;
+      --text: #111827;
+      --text-on-dark: #f3f4f6;
+      --muted: #6b7280;
+      --muted-on-dark: #cbd5e1;
+      --border: #e5e7eb;
+      --accent: #3b82f6;
+      --partial: #f59e0b;
+      --fallback: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 60px 16px 48px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: var(--surface-alt);
+      color: var(--text-on-dark);
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0;
+    }
+    header .meta {
+      font-size: 12px;
+      color: var(--muted-on-dark);
+    }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .card-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .card-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .card-title .code {
+      color: var(--muted);
+      font-weight: 500;
+      margin-left: 6px;
+      font-size: 12px;
+    }
+    .badge {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .badge.partial { color: var(--partial); }
+    .badge.fallback { color: var(--fallback); }
+    .erp {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .erp.empty {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+    .sub {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .sparkline {
+      margin-top: 4px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+    }
+    .sparkline svg { display: block; }
+    .sparkline.empty {
+      font-size: 11px;
+      color: var(--muted);
+      font-style: italic;
+    }
+    footer {
+      max-width: 1100px;
+      margin: 24px auto 0;
+      padding: 12px 4px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    footer code {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ERP Snapshot — 9 Markets</h1>
+    <div class="meta" id="meta">loading…</div>
+  </header>
+
+  <main>
+    <div class="grid" id="grid"></div>
+    <footer>
+      Static read-only snapshot. For the interactive dashboard with scenario controls,
+      run <code>python server.py</code> and open
+      <code>http://localhost:5001/dashboard</code>.
+      Regenerate this page with <code>python scripts/publish_snapshot.py</code>.
+    </footer>
+  </main>
+
+  <script src="./data/all.js"></script>
+  <script>
+    (function () {
+      const ORDER = ["US", "UK", "EU", "JP", "KR", "IN", "TW", "CN", "CN_CSI"];
+      const data = window.__ERP_SNAPSHOT__ || {};
+      const grid = document.getElementById("grid");
+      const meta = document.getElementById("meta");
+
+      function fmtPct(v) {
+        if (v == null || !isFinite(v)) return "n/a";
+        return (v * 100).toFixed(2) + "%";
+      }
+      function fmtIndex(v, sym) {
+        if (v == null || !isFinite(v)) return "";
+        return (sym || "") + v.toLocaleString("en-US", {
+          maximumFractionDigits: 2, minimumFractionDigits: 2
+        });
+      }
+      function escapeHtml(s) {
+        return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        })[c]);
+      }
+      function sparkline(history) {
+        const ys = (history || [])
+          .map(r => r.implied_erp)
+          .filter(v => v != null && isFinite(v));
+        if (ys.length < 2) return "";
+        const lo = Math.min(...ys);
+        const hi = Math.max(...ys);
+        const W = 240, H = 40, pad = 2;
+        const span = (hi - lo) || 1;
+        const pts = ys.map((v, i) => {
+          const x = pad + (i / (ys.length - 1)) * (W - 2 * pad);
+          const y = H - pad - ((v - lo) / span) * (H - 2 * pad);
+          return x.toFixed(1) + "," + y.toFixed(1);
+        }).join(" ");
+        return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" preserveAspectRatio="none">'
+             + '<polyline fill="none" stroke="#3b82f6" stroke-width="1.5" points="' + pts + '"/>'
+             + "</svg>";
+      }
+
+      function renderEmpty(code) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML =
+          '<div class="card-header"><div class="card-title">' + escapeHtml(code)
+          + '</div></div>'
+          + '<div class="erp empty">no data — run python scripts/publish_snapshot.py</div>';
+        grid.appendChild(card);
+      }
+
+      function render(code, payload) {
+        if (!payload) { renderEmpty(code); return; }
+        const tier = payload.data_quality || "full";
+        const sym = payload.currency_symbol || "";
+        const cur = payload.currency || "";
+        const idxName = payload.display_index_name || "";
+        const latest = payload.latest || {};
+        const erp = latest.implied_erp;
+        const idx = latest.index_level;
+        const date = latest.date || "";
+
+        const badge = tier !== "full"
+          ? '<span class="badge ' + escapeHtml(tier) + '">· ' + escapeHtml(tier) + '</span>'
+          : '';
+        const idxLine = idx != null
+          ? escapeHtml(idxName) + " " + fmtIndex(idx, sym)
+          : escapeHtml(idxName);
+        const spark = sparkline(payload.history);
+        const sparkBox = spark
+          ? '<div class="sparkline">' + spark + '</div>'
+          : '<div class="sparkline empty">sparkline needs ≥ 2 history points</div>';
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML =
+          '<div class="card-header">'
+          +   '<div class="card-title">' + escapeHtml(payload.name || code)
+          +     '<span class="code">' + escapeHtml(code) + ' · ' + escapeHtml(cur) + '</span>'
+          +   '</div>'
+          +   badge
+          + '</div>'
+          + '<div class="erp">' + fmtPct(erp) + '</div>'
+          + '<div class="sub">'
+          +   '<span>' + idxLine + '</span>'
+          +   '<span>' + escapeHtml(date) + '</span>'
+          + '</div>'
+          + sparkBox;
+        grid.appendChild(card);
+      }
+
+      // Header timestamp = most recent last_updated across loaded markets.
+      const stamps = ORDER
+        .map(c => data[c] && data[c].last_updated)
+        .filter(Boolean)
+        .sort();
+      meta.textContent = stamps.length
+        ? "snapshot generated " + stamps[stamps.length - 1]
+        : "no snapshot loaded — generate with python scripts/publish_snapshot.py";
+
+      ORDER.forEach(code => render(code, data[code]));
+    })();
+  </script>
+</body>
+</html>
