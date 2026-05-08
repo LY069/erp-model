@@ -305,3 +305,112 @@ python main.py --update --market KR --report   # implied ERP in [2.87%, 6.87%]
 python main.py --update --market IN --report   # in [5.08%, 9.08%]
 python main.py --update --market TW --report   # in [3.01%, 7.01%]
 ```
+
+---
+
+## Phase 5a — local launchd refresh (2026-05-08)
+
+No schema change. Adds:
+
+1. New CLI flags in `main.py` — `--all-markets` (loop `--update` across every
+   `MARKETS` code in `markets_config.py` with per-market error isolation +
+   idempotent skip when today's row already exists for that market) and
+   `--force` (bypass the skip).
+2. New committed plist at `assets/local.erp.refresh.plist` for an **opt-in**
+   `launchd` user agent that fires `python main.py --update --all-markets`
+   daily at 18:00 local. The plist file in `assets/` is the committed source
+   of truth; **it is NOT loaded by default**.
+3. New CLI flag `--auto-update {on,off,status}` that wraps the launchctl
+   install/uninstall lifecycle.
+
+### Default behaviour: manual refresh
+
+By design, this project does **not** install or load any LaunchAgent on a
+fresh checkout. The intended workflow is:
+
+```sh
+cd "/Users/yelintao/Work/DAA/Equity/ERP Model"
+python main.py --update --all-markets   # run when you sit down to work
+```
+
+The launchd auto-refresh is opt-in via the toggle below.
+
+### Behaviour summary
+
+| Invocation                                            | Effect                                                      |
+|-------------------------------------------------------|-------------------------------------------------------------|
+| `python main.py --update`                             | single-market US, always refetches                          |
+| `python main.py --update --market KR`                 | single-market KR, always refetches                          |
+| `python main.py --update --all-markets`               | loop all 9; skip any market whose row was written today     |
+| `python main.py --update --all-markets --force`       | loop all 9; refetch every market regardless                 |
+| `python main.py --auto-update status`                 | print current scheduled-refresh state                       |
+| `python main.py --auto-update on`                     | enable daily 18:00 refresh (opt-in)                         |
+| `python main.py --auto-update off`                    | disable + remove the LaunchAgent                            |
+
+Aggregate exit code for `--all-markets`: `0` if at least one market was OK or
+skipped; `1` only if every market failed. Per-market failures are surfaced in
+the final summary table but never abort the loop.
+
+### Auto-update toggle (opt-in scheduled refresh)
+
+```sh
+python main.py --auto-update status   # baseline: OFF (default — manual refresh only)
+python main.py --auto-update on       # copy assets/local.erp.refresh.plist into ~/Library/LaunchAgents/
+                                      # and launchctl bootstrap gui/<uid>; daily 18:00 fires from now on
+python main.py --auto-update off      # launchctl bootout + rm the plist; back to default
+```
+
+`--auto-update on` is idempotent — running it twice (e.g. after editing the
+plist source) re-bootstraps cleanly. Logs land in
+`~/Library/Logs/erp-refresh.log` and `.err`. Verify any time with
+`launchctl list | grep erp` (expects `local.erp.refresh` while loaded).
+
+### Manual launchctl access (advanced / fallback)
+
+The toggle above is the recommended path. The raw commands underneath are:
+
+```sh
+# install (= --auto-update on)
+cp assets/local.erp.refresh.plist ~/Library/LaunchAgents/local.erp.refresh.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.erp.refresh.plist
+launchctl enable    gui/$(id -u)/local.erp.refresh
+
+# uninstall (= --auto-update off)
+launchctl bootout   gui/$(id -u)/local.erp.refresh
+rm ~/Library/LaunchAgents/local.erp.refresh.plist
+
+# manual fire without waiting for 18:00
+launchctl kickstart -k gui/$(id -u)/local.erp.refresh
+```
+
+### Change the schedule
+
+Edit `assets/local.erp.refresh.plist` → `StartCalendarInterval`, then run
+`python main.py --auto-update on` again to re-bootstrap with the new times
+(launchd does not pick up edits in place).
+
+### Sleep caveat
+
+macOS `launchd` does **not** catch up missed `StartCalendarInterval` fires
+when the mac was asleep at the scheduled time. If the laptop sleeps through
+18:00, the next run is the following day at 18:00. Recovery is a manual
+`python main.py --update --all-markets` from the repo (idempotent — only
+markets that haven't been updated today will refetch). Phase 5b/5c (GitHub
+Actions snapshot job) will provide a redundant cloud-side refresh.
+
+### Python path caveat
+
+`ProgramArguments[0]` is hardcoded to
+`/Library/Frameworks/Python.framework/Versions/3.14/bin/python3` (matches the
+v0.phase4 environment). After a Python upgrade, edit the plist + run
+`python main.py --auto-update on` to re-bootstrap. A future Phase 5d may
+auto-resolve `which python3` at install.
+
+### Files
+
+- NEW: `assets/local.erp.refresh.plist` (committed source of truth; not loaded by default)
+- modified: `main.py` (`--all-markets`, `--force`, `--auto-update`, `_run_one_market`,
+  `cmd_update_all_markets`, `cmd_auto_update`)
+- not committed: `~/Library/LaunchAgents/local.erp.refresh.plist` (per-user;
+  written by `--auto-update on`, removed by `--auto-update off`) and
+  `~/Library/Logs/erp-refresh.{log,err}`

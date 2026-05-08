@@ -1591,4 +1591,116 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             Open (carried from prior phases): React source location
               (cosmetic); Dashboard PAYOUT RATIO form input
               hardcode (cosmetic); Phase 5 hardening list above.
+
+2026-05-08  Phase 5a complete — local launchd refresh (CLI side; user
+            installs plist on their own machine).
+            (1) main.py: extracted per-market work into _run_one_market()
+                helper; added cmd_update_all_markets() that loops over
+                MARKETS.keys() with per-market try/except (one failing
+                market does not abort the others) and an idempotent skip
+                when the latest row's updated_at falls on today's local
+                date. Two new flags: --all-markets and --force (bypass
+                the skip). Mutex checks reject --all-markets without
+                --update, --force without --all-markets, and --all-markets
+                with any single-market override (--buyback/--growth/--eps/
+                --payout/--as-of) → exit 2 with friendly error. When
+                --all-markets is absent, behaviour byte-identical to v0.phase4
+                single-market path. Aggregate exit code: 0 if any market
+                ok-or-skipped; 1 only if every market failed.
+            (2) assets/local.erp.refresh.plist NEW — committed source of
+                truth. Daily 18:00 local via StartCalendarInterval +
+                RunAtLoad; WorkingDirectory pinned to repo so config.py's
+                .env loader picks up FRED_API_KEY; logs to
+                ~/Library/Logs/erp-refresh.{log,err}. plutil validates OK.
+                Apple-style label local.erp.refresh.
+            (3) MIGRATION.md Phase 5a section: install (cp + launchctl
+                bootstrap gui/$(id -u)), verify (launchctl list | grep erp,
+                kickstart -k for manual fire), uninstall (bootout + rm),
+                schedule edit, sleep caveat (launchd does NOT catch up
+                missed calendar fires; recovery via manual --all-markets).
+            Verification (CLI; plist install deferred to user):
+              [✓] --update --market US --report → ERP=6.69%, exit 0
+                  (single-market path byte-equivalent to pre-Phase-5a)
+              [✓] --update --all-markets (cold) → 7 ok / 1 skip (US, just
+                  written) / 1 failed (CN_CSI yfinance NaN); exit 0
+              [✓] --update --all-markets (immediate rerun) → 0 ok /
+                  8 skipped / 1 failed; loop completes in 6.9s with zero
+                  API calls — idempotency confirmed via updated_at on
+                  today's local date
+              [✓] --update --all-markets --force → 8 ok / 0 skipped /
+                  1 failed; exit 0; bypass confirmed
+              [✓] DB cross-check: 8/9 markets' updated_at falls on
+                  2026-05-08; CN_CSI keeps yesterday's 2026-05-07 row
+                  per "still returns latest successful row per market".
+              [✓] Mutex: --all-markets w/o --update → exit 2; --force
+                  w/o --all-markets → exit 2; --all-markets --buyback
+                  → exit 2 with explanatory error.
+              [-] launchctl install + 24h soak deferred to user (plist
+                  file is per-machine, persistent — out of scope to
+                  install automatically from this session).
+            Files touched: main.py, assets/local.erp.refresh.plist (NEW),
+              MIGRATION.md, SHARED_NOTES.md (this line). Agent 1/2/3/4
+              sections of SHARED_NOTES untouched. Phase 5b (publish_snapshot
+              + docs/data/*.json) and Phase 5c (.github/workflows/*.yml)
+              not started.
+            Pre-existing issue surfaced (NOT new in this session):
+              CN_CSI 510300.SS yfinance returns NaN index_level
+              intermittently → upsert_inputs hits NOT NULL constraint
+              and fails. Per-market error isolation makes this a soft
+              failure (other 8 markets still update). Phase 5 hardening
+              candidate: in data_sources/overrides/cn.py, fall back to
+              prior trading day on NaN, mirroring Phase 1's robust-fetch
+              pattern.
+            Recommend: `git tag v0.phase5a` after committing.
+            Next session (Phase 5b): scripts/publish_snapshot.py +
+              docs/data/{market}.json + minimal docs/index.html reader.
+
+2026-05-08  Phase 5a follow-up — auto-refresh is now OPT-IN (per user
+            request: "default should be manual refresh; add a toggle to
+            turn auto update on, but not a default").
+            (1) main.py: new `cmd_auto_update(args)` + flag
+                `--auto-update {on,off,status}`. Wraps launchctl bootstrap
+                / bootout / print under domain `gui/<uid>`. `on` is
+                idempotent — if the agent is already loaded, it polls up
+                to 2s for the async bootout to settle before re-bootstrapping.
+                `off` removes ~/Library/LaunchAgents/local.erp.refresh.plist
+                AND bootouts. `status` reports one of three states:
+                  · OFF (default — manual refresh only)
+                  · INSTALLED but NOT LOADED (rare; recovery: `--auto-update on`)
+                  · ON (scheduled, loaded into launchd)
+                Plist file in assets/ is unchanged — committed source-of-
+                truth that is NOT loaded by default. Help text + module
+                docstring updated to advertise the toggle.
+            (2) MIGRATION.md Phase 5a section reorganised:
+                  · "Default behaviour: manual refresh" called out up top.
+                  · Behaviour summary table extended with --auto-update rows.
+                  · Toggle CLI presented as primary install path; raw
+                    launchctl commands kept as advanced/fallback footnote.
+                  · "Change the schedule" now points to `--auto-update on`
+                    re-bootstrap rather than raw bootout/bootstrap.
+            Verification (lifecycle):
+              [✓] baseline `--auto-update status` on a clean clone → OFF
+                  (plist not loaded, file not in ~/Library/LaunchAgents/)
+              [✓] `--auto-update on` → bootstrap exit 0; launchctl list
+                  shows local.erp.refresh; status reports ON; RunAtLoad
+                  fired immediate test run (PID 2304, exit 0)
+              [✓] `--auto-update on` again (idempotent re-on) → bootouts
+                  prior, polls until gone, re-bootstraps cleanly
+                  (PID 2314); no race condition on the async bootout
+              [✓] `launchctl kickstart -k gui/<uid>/local.erp.refresh` →
+                  python ran end-to-end; ~/Library/Logs/erp-refresh.log
+                  populated with full per-market summary (9 skipped
+                  because today's runs were already in DB)
+              [✓] `--auto-update off` → bootout + plist removed;
+                  launchctl list no longer shows erp; status reports OFF
+              [✓] `--auto-update off` again (idempotent off) → reports
+                  "already OFF"; no error
+              [-] 24h soak test deferred to user (the daily 18:00 fire
+                  cannot be tested in-session)
+            Files touched: main.py, MIGRATION.md, SHARED_NOTES.md (this
+              line). assets/local.erp.refresh.plist unchanged. Agent
+              1/2/3/4 sections of SHARED_NOTES untouched.
+            v0.phase5a tag is now safe to apply: default state of a
+              fresh clone is "manual refresh"; auto-update is reachable
+              only through `python main.py --auto-update on`.
 ```
