@@ -1,6 +1,7 @@
 # Runtime dependencies for the ERP model.
 # Lower bounds only — yfinance and pandas need to float. Tested on
 # Python 3.12 (CI) and Python 3.14 (local). See SHARED_NOTES Phase 5c.
+# CI: .github/workflows/{lint,smoke,snapshot}.yml
 
 # ── Core scientific stack ─────────────────────────────────────────
 pandas>=2.0
