@@ -1,0 +1,57 @@
+name: Snapshot
+
+on:
+  workflow_dispatch:   # manual only — no cron (Mode B per Phase 5b handoff)
+
+permissions:
+  contents: write      # needed to push the docs/data/* commit back to main
+
+jobs:
+  snapshot:
+    name: refresh + publish docs/data
+    runs-on: ubuntu-latest
+
+    env:
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0   # full history so the push lands cleanly
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install runtime deps
+        run: pip install -r requirements.txt
+
+      - name: Seed US history (cold-start safety net)
+        # On a fresh CI runner the DB is empty. Seeding US from the Damodaran
+        # XLS gives publish_snapshot.py something to write even if --update
+        # partially fails for other markets. No FRED key needed for this step.
+        run: python seed_historical.py --market US
+
+      - name: Update all markets
+        # Exits 0 unless every market fails (main.py:249).
+        # EM markets may log warnings — that's expected and non-fatal.
+        run: python main.py --update --all-markets
+
+      - name: Publish snapshot to docs/data/
+        # Exits 0 if at least one market published (scripts/publish_snapshot.py:150).
+        run: python scripts/publish_snapshot.py
+
+      - name: Commit and push docs/data updates
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data/
+          # Only commit if there are staged changes (idempotent same-day re-runs).
+          if git diff --staged --quiet; then
+            echo "docs/data/ unchanged — skipping commit."
+          else
+            git commit -m "chore: snapshot $(date -u +%Y-%m-%d) [skip ci]"
+            git push origin main
+          fi

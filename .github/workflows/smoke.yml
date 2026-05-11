@@ -1,0 +1,67 @@
+name: Smoke
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/data/**"   # snapshot auto-commits — don't re-trigger smoke
+      - "**/*.md"
+  pull_request:
+    paths-ignore:
+      - "docs/data/**"
+      - "**/*.md"
+
+jobs:
+  smoke:
+    name: seed US + validate + golden ERP
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install runtime deps
+        run: pip install -r requirements.txt
+
+      - name: Seed historical US data (Damodaran XLS — no auth required)
+        # Downloads histimpl.xls from pages.stern.nyu.edu (public, no key).
+        # Writes ~/erp_model.db (default ERP_DB_PATH per config.py).
+        run: python seed_historical.py --market US
+
+      - name: Validate solver (Damodaran 1999 + Jan 2026 examples)
+        # validate_against_damodaran() always exits 0 — it prints but never raises.
+        # This step confirms the function runs without crashing.
+        run: python main.py --validate
+
+      - name: Golden-value regression guard (Jan 2026 US ERP)
+        # Asserts the solver deterministically reproduces 4.96% for Damodaran's
+        # Jan 2026 inputs. Note: Damodaran's own spreadsheet yields 4.23% —
+        # the 0.73pp gap is a known modeling difference documented by --validate
+        # itself ("Our result: 4.96%, Expected: ~4.23%"). The guard catches
+        # unintentional solver regressions, not the pre-existing gap.
+        # See: erp_calculator.py validate_against_damodaran() line ~734.
+        run: |
+          python - <<'EOF'
+          from erp_calculator import compute_erp_fcfe
+          r = compute_erp_fcfe(
+              dt="2026-01-01",
+              index_level=5881.63,
+              trailing_eps=271.52,
+              analyst_growth=0.1050,
+              rfr_rate=0.0418,
+              payout_ratio=0.7785,
+              year1_growth=0.1559,
+              year2_growth=0.1448,
+          )
+          expected = 0.0496
+          delta = abs(r.implied_erp - expected)
+          assert delta < 0.0005, (
+              f"Solver regression: Jan 2026 US ERP = {r.implied_erp:.4f}, "
+              f"expected ~{expected:.4f} (delta={delta:.4f})"
+          )
+          print(f"GOLDEN OK: Jan 2026 US ERP = {r.implied_erp:.4%} (delta={delta:.6f})")
+          EOF

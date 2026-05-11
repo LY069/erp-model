@@ -1,0 +1,40 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/data/**"   # snapshot auto-commits — don't re-trigger lint
+      - "**/*.md"
+  pull_request:
+    paths-ignore:
+      - "docs/data/**"
+      - "**/*.md"
+
+jobs:
+  lint:
+    name: ruff + import smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install runtime deps
+        run: pip install -r requirements.txt
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Lint (ruff default rules)
+        run: ruff check .
+
+      - name: Import smoke
+        # Matches the pre-commit hook spec in SHARED_NOTES.md §4 line 858.
+        # Catches syntax errors and broken import graphs across all modules.
+        run: |
+          python -c "import config, database, data_fetcher, erp_calculator, server, main, markets_config"
