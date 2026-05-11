@@ -116,6 +116,9 @@ def init_db():
         ("trailing_eps",  "REAL"),
         ("payout_ratio",  "REAL DEFAULT 0.7785"),
         ("growth_source", "TEXT"),
+        # currency was added in migrations/001_multi_market.py (Phase 1) but was
+        # never back-ported here, so fresh DBs (e.g. CI runners) missed it.
+        ("currency",      "TEXT NOT NULL DEFAULT 'USD'"),
     ]
     for col, coldef in inputs_migrations:
         if col not in existing_inputs_cols:
