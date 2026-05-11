@@ -1786,3 +1786,50 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
               repo public; verify Pages renders docs/index.html under the
               github.io URL.
 ```
+```
+2026-05-11  Phase 5c complete. Pre-work + CI workflows + finalization.
+            Files touched:
+              requirements.txt (NEW) — 9 runtime deps, lower-bound pins,
+                yfinance + pandas float per spec.
+              .github/workflows/lint.yml (NEW) — ruff check . + import smoke,
+                push/PR on main, paths-ignore docs/data/** and *.md.
+              .github/workflows/smoke.yml (NEW) — seed US + --validate +
+                golden-value regression guard; exits 1 on solver drift.
+              .github/workflows/snapshot.yml (NEW) — workflow_dispatch only
+                (Mode B, no cron); FRED_API_KEY from repo secret; commits
+                docs/data/* with [skip ci]; idempotent same-day re-runs.
+              database.py — back-port currency column migration to init_db()
+                (pre-existing cold-DB bug; currency was added by Phase 1
+                migrations/001_multi_market.py but never synced to inline
+                migration block → fresh CI DBs missing the column).
+              data_fetcher.py, erp_calculator.py, server.py,
+                scripts/publish_snapshot.py, visualization.py, main.py —
+                ruff baseline cleanup: 53 findings, 0 logic changes.
+                Docstring-before-future-import swap in data_fetcher + erp_calc;
+                file-level noqa for sys.path-prep E402 in server + publish;
+                dead imports removed; f-string prefix fixes; F841 noqa.
+              SHARED_NOTES.md (this line). Agent 1/2/3/4 sections untouched.
+            Verification:
+              [✓] ruff check . → All checks passed (0 findings)
+              [✓] import smoke → config, database, data_fetcher,
+                  erp_calculator, server, main, markets_config all OK
+              [✓] lint.yml: green on push (run 25650711270, 37s)
+              [✓] smoke.yml: green on push (run 25650711267, 39s)
+                  — includes golden regression guard
+              [✓] Golden note: solver computes 4.96% for Jan 2026 inputs;
+                  Damodaran spreadsheet says 4.23%; gap is pre-existing,
+                  documented by --validate output. Guard asserts ±0.05pp
+                  from 4.96% (not from 4.23%).
+              [✓] snapshot.yml: manual Run workflow → green in 58s (run
+                  25650765637); bot commit "chore: snapshot 2026-05-11
+                  [skip ci]" landed on main as 86d2fc1
+              [✓] docs/data/US.json last_updated = 2026-05-11T04:45:24+00:00
+                  (today UTC); 11 market JSON files refreshed
+              [✓] paths-ignore working: bot commit (86d2fc1) only triggered
+                  Pages build — lint and smoke did NOT re-fire
+              [-] No cron schedule (Mode B per Phase 5b handoff)
+              [-] Node.js 20 deprecation warning on actions/checkout@v4 +
+                  actions/setup-python@v5; non-functional, will need upgrade
+                  before 2026-06-02. Deferred.
+            Recommend: git tag v0.phase5c
+```
