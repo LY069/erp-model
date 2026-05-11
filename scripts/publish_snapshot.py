@@ -1,3 +1,4 @@
+# ruff: noqa: E402  (sys.path manipulation must precede local imports)
 """
 Publish the ERP database to disk as a static read-only snapshot.
 

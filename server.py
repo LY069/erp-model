@@ -1,3 +1,4 @@
+# ruff: noqa: E402  (sys.path manipulation must precede local imports)
 """
 ERP Model — Local Flask API Server
 ===================================
@@ -26,15 +27,15 @@ THIS_DIR = Path(__file__).resolve().parent
 os.chdir(THIS_DIR)
 sys.path.insert(0, str(THIS_DIR))
 
-from config import OUTPUT_DIR, DEFAULT_PAYOUT_RATIO
+from config import DEFAULT_PAYOUT_RATIO
 from markets_config import MARKETS, get_market
 from database import (
     init_db, upsert_inputs, upsert_computation, upsert_forecast, upsert_breakeven,
-    get_latest, get_history, get_forecasts, get_latest_breakeven, get_log, get_stats
+    get_latest, get_history, get_forecasts, get_latest_breakeven, get_log
 )
 from data_fetcher import fetch_all_inputs
 from erp_calculator import (
-    compute_erp, compute_erp_fcfe, compute_erp_ddm,
+    compute_erp_fcfe, compute_erp_ddm,
     forecast_erp, compute_breakeven_growth,
     NORMAL_ERP_LONGRUN, NORMAL_ERP_DECADE
 )
@@ -385,7 +386,7 @@ def compute_manual():
                 rfr_rate=float(rfr_raw),
                 ramped=True,
             )
-    except Exception as e:
+    except Exception:
         return _err(f"Solver failed: {traceback.format_exc()}", 500)
 
     return _ok({

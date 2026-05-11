@@ -7,8 +7,6 @@ from __future__ import annotations   # enables float | None on Python 3.9
 import json
 import sqlite3
 import time
-from datetime import date, datetime
-from pathlib import Path
 from typing import Optional
 
 import pandas as pd

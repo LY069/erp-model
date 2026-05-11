@@ -1,4 +1,3 @@
-from __future__ import annotations
 """
 Data fetching module — pulls all inputs from free-tier sources.
 
@@ -32,6 +31,8 @@ This is S&P 500 aggregate earnings divided by the number of units in the index.
 
 Free-tier proxy: use SPY's trailing EPS or estimate from index level and P/E.
 """
+from __future__ import annotations
+
 import warnings
 from datetime import date, datetime, timedelta
 from typing import Optional
@@ -46,7 +47,6 @@ from config import (
     FRED_TBOND_SERIES,
     DEFAULT_BUYBACK_YIELD,
     DEFAULT_ANALYST_GROWTH,
-    DEFAULT_PAYOUT_RATIO,
 )
 
 

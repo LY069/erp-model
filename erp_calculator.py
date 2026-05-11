@@ -1,4 +1,3 @@
-from __future__ import annotations
 """
 Core ERP computation engine.
 
@@ -44,8 +43,9 @@ LEGACY DDM METHOD (for backward compatibility):
   With flat growth: CF_t = base_cf × (1+g)^t
   This is simpler but diverges more from Damodaran's published values.
 """
+from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 import warnings
 
@@ -106,9 +106,9 @@ class ERPResult:
 
     def summary(self) -> str:
         lines = [
-            f"══════════════════════════════════════════════════",
+            "══════════════════════════════════════════════════",
             f"  Implied ERP — {self.date}  [{self.method.upper()} Method]",
-            f"══════════════════════════════════════════════════",
+            "══════════════════════════════════════════════════",
             f"  Index Level:          {self.index_level:>10,.2f}",
         ]
         if self.method == "fcfe":
@@ -126,30 +126,30 @@ class ERPResult:
             f"  Analyst Growth Yr1:   {self.growth_high:>10.2%}",
             f"  Stable Growth (=Rf):  {self.growth_stable:>10.2%}",
             f"  Risk-Free Rate (10Y): {self.risk_free_rate:>10.2%}",
-            f"──────────────────────────────────────────────────",
-            f"  Year-by-Year Growth Rates (Damodaran Ramp-Down):",
+            "──────────────────────────────────────────────────",
+            "  Year-by-Year Growth Rates (Damodaran Ramp-Down):",
         ]
         for i, g in enumerate(self.annual_growth_rates, 1):
             lines.append(f"    Year {i}: {g:>8.2%}")
         lines += [
-            f"──────────────────────────────────────────────────",
-            f"  Projected Cash Flows:",
+            "──────────────────────────────────────────────────",
+            "  Projected Cash Flows:",
         ]
         for i, cf in enumerate(self.cash_flows, 1):
             lines.append(f"    Year {i}: {cf:>10,.2f}")
         lines += [
             f"  Terminal Value:        {self.terminal_value:>10,.2f}",
-            f"──────────────────────────────────────────────────",
+            "──────────────────────────────────────────────────",
             f"  PV of Stage 1 CFs:    {self.pv_stage1:>10,.2f}",
             f"  PV of Terminal Value:  {self.pv_terminal:>10,.2f}",
             f"  Total PV (= Index):   {self.pv_stage1 + self.pv_terminal:>10,.2f}",
-            f"──────────────────────────────────────────────────",
+            "──────────────────────────────────────────────────",
             f"  Implied Cost of Eq:   {self.implied_r:>10.2%}",
             f"  Risk-Free Rate:       {self.risk_free_rate:>10.2%}",
             f"  ★ Implied ERP:        {self.implied_erp:>10.2%}",
-            f"──────────────────────────────────────────────────",
+            "──────────────────────────────────────────────────",
             f"  Solver: {self.solver_method} ({self.solver_iterations} iterations)",
-            f"══════════════════════════════════════════════════",
+            "══════════════════════════════════════════════════",
         ]
         return "\n".join(lines)
 
@@ -539,7 +539,7 @@ def forecast_erp(
         rate_drift:    Annual change in risk-free rate
         growth_drift:  Annual change in analyst growth estimate
     """
-    from datetime import date, timedelta
+    from datetime import date
 
     if scenarios is None:
         scenarios = {
@@ -707,7 +707,7 @@ def compute_breakeven_growth(
         )
         implied_erp_at_neutral = current_result.implied_erp
     except Exception:
-        implied_erp_at_neutral = float("nan")
+        implied_erp_at_neutral = float("nan")  # noqa: F841
 
     return {
         "breakeven_growth": round(breakeven_g, 4),
@@ -765,7 +765,7 @@ def validate_against_damodaran():
     )
     print(result.summary())
     print()
-    print(f"  Expected ERP: ~4.23%")
+    print("  Expected ERP: ~4.23%")
     print(f"  Our result:    {result.implied_erp:.2%}")
     print(f"  Difference:    {abs(result.implied_erp - 0.0423):.4f}")
     print()

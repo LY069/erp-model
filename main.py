@@ -40,7 +40,7 @@ from database import (
 )
 from data_fetcher import fetch_all_inputs
 from erp_calculator import (
-    compute_erp, compute_erp_fcfe, compute_erp_ddm,
+    compute_erp_fcfe, compute_erp_ddm,
     forecast_erp, compute_breakeven_growth, validate_against_damodaran
 )
 from markets_config import MARKETS
@@ -457,7 +457,7 @@ def cmd_auto_update(args):
         print(f"  Auto-update: {label}")
         print(f"  Plist src:   {_PLIST_SRC}")
         print(f"  Plist dst:   {_PLIST_DST}")
-        print(f"  Manual:      python main.py --update --all-markets")
+        print("  Manual:      python main.py --update --all-markets")
         print()
         return
 
@@ -498,10 +498,10 @@ def cmd_auto_update(args):
         subprocess.run(["launchctl", "enable", target],
                        capture_output=True, text=True)
         print()
-        print(f"  ✓ Auto-update ON. Daily refresh at 18:00 local.")
+        print("  ✓ Auto-update ON. Daily refresh at 18:00 local.")
         print(f"    Plist:  {_PLIST_DST}")
-        print(f"    Logs:   ~/Library/Logs/erp-refresh.log (.err)")
-        print(f"    Disable later: python main.py --auto-update off")
+        print("    Logs:   ~/Library/Logs/erp-refresh.log (.err)")
+        print("    Disable later: python main.py --auto-update off")
         print()
         return
 
@@ -523,7 +523,7 @@ def cmd_auto_update(args):
         else:
             print()
             print(f"  Auto-update already OFF (no plist at {_PLIST_DST}).")
-        print(f"    Manual refresh: python main.py --update --all-markets")
+        print("    Manual refresh: python main.py --update --all-markets")
         print()
         return
 

@@ -1,0 +1,24 @@
+# Runtime dependencies for the ERP model.
+# Lower bounds only — yfinance and pandas need to float. Tested on
+# Python 3.12 (CI) and Python 3.14 (local). See SHARED_NOTES Phase 5c.
+
+# ── Core scientific stack ─────────────────────────────────────────
+pandas>=2.0
+numpy>=1.26
+scipy>=1.11
+
+# ── Market data sources ───────────────────────────────────────────
+yfinance>=0.2.40
+fredapi>=0.5.1
+
+# ── HTTP / web framework ─────────────────────────────────────────
+requests>=2.31
+flask>=3.0
+
+# ── Plotting (visualization.py + main.py --plot) ──────────────────
+matplotlib>=3.8
+
+# ── Excel reader for Damodaran .xls cache ─────────────────────────
+# seed_historical.py:51 → pd.ExcelFile(..., engine="xlrd")
+# xlrd 2.x kept .xls support (dropped .xlsx, which we don't read here)
+xlrd>=2.0

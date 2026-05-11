@@ -7,9 +7,7 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")  # Non-interactive backend
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import matplotlib.ticker as mticker
-import numpy as np
 import pandas as pd
 
 from config import OUTPUT_DIR
@@ -139,11 +137,11 @@ def print_report(market: str = "US"):
     print(f"  Analyst Growth (5yr):  {latest['analyst_5yr_growth']:>10.2%}")
     print(f"  Risk-Free Rate (10yr): {latest['rfr_rate']:>10.2%}")
     print()
-    print(f"  ┌─────────────────────────────────────────────┐")
+    print("  ┌─────────────────────────────────────────────┐")
     print(f"  │  Implied Cost of Equity: {latest['implied_cost_of_equity']:>8.2%}           │")
     print(f"  │  Implied ERP:            {latest['implied_erp']:>8.2%}           │")
     print(f"  │  Solver:                 {latest['solver_method']:<20s}   │")
-    print(f"  └─────────────────────────────────────────────┘")
+    print("  └─────────────────────────────────────────────┘")
 
     if len(df) > 1:
         print()
