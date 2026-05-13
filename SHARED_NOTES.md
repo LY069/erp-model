@@ -2031,4 +2031,65 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             Recommend: try the new button + dropdown in the dashboard at
               http://localhost:5001/ ; then proceed with Track C / D on
               go.
+
+2026-05-14  Phase 6 Track C complete — CN_CSI display fix + empty-history
+            hardening.
+            Files touched:
+              markets_config.py:351 — display_index_name for CN_CSI
+                relabelled "CSI 300" → "CSI 300 (ETF unit, 510300.SS)".
+                Math unchanged: the underlying ticker is still 510300.SS
+                (Huatai-PineBridge CSI 300 ETF, CNY-native), so the
+                index_level still reads ~4.95 per unit (vs the CSI 300
+                index ~3700). The label now tells the user exactly what
+                ticker they're looking at, avoiding the "why is CSI 300
+                trading at 5?" confusion. ERP is unchanged (~5.4%, EPS
+                and dividend yield expressed on the same per-unit basis).
+              data_sources/yahoo_fred.py — two related fixes in the
+                fetch_dividend_yield fallback path (the path that
+                triggers when ETF .info doesn't carry trailingAnnualDividendYield):
+                * Added _last_close(ticker) helper at module scope that
+                  tries period="1d" → "5d" → "1mo" until a non-empty
+                  Close column is found. Returns None if every window
+                  is empty (Asia/HK holidays, halted ETFs, etc.) rather
+                  than IndexError-ing on `.iloc[-1]` of an empty Series.
+                * fetch_dividend_yield now calls _last_close and short-
+                  circuits to the 1.5% default when price is None/≤0
+                  OR when annual_div is NaN (rare but possible if every
+                  dividend record is NaN). Emits a warning naming the
+                  ticker + the bad values so the fallback is visible
+                  in logs, not silent.
+                CN_CSI in particular still routes through cn.py
+                (data_sources/overrides/cn.py) so this fix is
+                principally defensive — any market that lands in the
+                base fetch_dividend_yield fallback now widens cleanly
+                instead of crashing.
+              SHARED_NOTES.md (this entry). Agent 1/2/3/4 sections
+                untouched.
+            Verification:
+              [✓] ruff check . → All checks passed (0 findings).
+              [✓] Import smoke: get_market('CN_CSI').display_index_name
+                  → "CSI 300 (ETF unit, 510300.SS)".
+              [✓] python -m unittest tests.test_refresh_endpoint →
+                  3/3 pass (Track B tests unaffected).
+              [✓] python main.py --validate → unchanged output (solver
+                  + cross-time reconciliation block intact).
+              [-] Live CN_CSI fetch via yfinance not exercised here —
+                  network-flaky on Asia time; cn.py override is what
+                  actually serves CN_CSI today. The base-path fix is
+                  defensive coverage for any future market that hits
+                  the fallback. Will exercise in production on next
+                  --update --all-markets run.
+            Deferred (not in Track C scope):
+              - Track D (snapshot.yml cron block — gated on user
+                selecting Cloud-nightly in the Track B dropdown).
+              - Re-scaling CN_CSI's index_level from per-unit (~4.95)
+                to CSI 300 points (~3700) via a tracking multiplier.
+                Per the Phase 6 plan: option 2 (relabel) chosen over
+                option 1 (multiply by ratio) because the ETF↔index
+                ratio drifts and needs periodic re-pinning. Relabel is
+                stable forever.
+            Recommend: load the dashboard at /, switch to CN (CSI 300),
+              confirm the new label appears in the source badge / title.
+              Then proceed with Track D (or skip if you don't want
+              Cloud-nightly).
 ```

@@ -348,7 +348,7 @@ MARKETS: dict[str, MarketSpec] = {
               "Shares CNDataSource rfr chain with CN (Investing.com→US+NDF→"
               "constant). Onshore-investor pricing — capital-controlled, "
               "distinct ERP from MCHI series.",
-        display_index_name="CSI 300",
+        display_index_name="CSI 300 (ETF unit, 510300.SS)",
         display_index_short="CSI",
         display_rfr_name="10Y CGB Yield",
         display_rfr_short="CGB",

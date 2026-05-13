@@ -33,6 +33,23 @@ def _now() -> int:
     return int(time.time())
 
 
+def _last_close(ticker: "yf.Ticker") -> Optional[float]:
+    """Return the most recent close price, widening the window if Yahoo
+    returns nothing for `period="1d"` (e.g. on Asia/HK holidays for
+    HK- and Shanghai-listed ETFs)."""
+    for period in ("1d", "5d", "1mo"):
+        try:
+            hist = ticker.history(period=period)
+        except Exception:
+            continue
+        if hist is None or hist.empty or "Close" not in hist.columns:
+            continue
+        closes = hist["Close"].dropna()
+        if len(closes) > 0:
+            return float(closes.iloc[-1])
+    return None
+
+
 class YahooFredDataSource:
     """MarketSpec-parameterised Yahoo+FRED fetcher."""
 
@@ -164,7 +181,16 @@ class YahooFredDataSource:
             divs.index = divs.index.tz_localize(None)
         recent = divs[divs.index >= (end - timedelta(days=365))]
         annual_div = float(recent.sum())
-        price = float(ticker.history(period="1d")["Close"].iloc[-1])
+        price = _last_close(ticker)
+        # Empty Yahoo history (Asia/HK holidays) or NaN annual_div both
+        # collapse to the 1.5% default rather than blowing up downstream.
+        if price is None or price <= 0 or np.isnan(annual_div):
+            warnings.warn(
+                f"Empty price/dividend history for {self.spec.yahoo_etf_for_divy} "
+                f"(price={price}, annual_div={annual_div}); using 1.5% default"
+            )
+            return FetchResult(value=0.015, source="default:1.5%",
+                               fetched_at=_now(), is_fallback=True)
         return FetchResult(
             value=annual_div / price,
             source=f"yahoo:{self.spec.yahoo_etf_for_divy} 12M trailing",
