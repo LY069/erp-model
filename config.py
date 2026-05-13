@@ -69,5 +69,15 @@ FRED_TBOND_SERIES = "DGS10"         # 10-Year Treasury Constant Maturity Rate
 FRED_TBILL_SERIES = "DTB3"          # 3-Month Treasury Bill (for reference)
 FRED_SP500_DIV_YIELD = None         # Not available on FRED; use Yahoo
 
+# ── Auto-refresh mode persistence (Phase 6 Track B) ───────────────
+# Small JSON blob recording which auto-refresh mode the user picked in
+# the dashboard toggle. Default = manual. The launchd plist (Local-daily)
+# is still authoritative for what's actually scheduled on the machine;
+# this file just records the user's UI selection so the dashboard can
+# render the right state after a reload.
+REFRESH_MODE_PATH = Path.home() / ".erp_model" / "refresh_mode.json"
+REFRESH_MODES = ("manual", "local", "cloud")
+DEFAULT_REFRESH_MODE = "manual"
+
 # ── Display ───────────────────────────────────────────────────────
 DECIMAL_PLACES = 4                  # Precision for displayed percentages

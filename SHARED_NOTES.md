@@ -1932,4 +1932,103 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
             Recommend: review the cross-time finding above; if approved,
               the follow-up session can proceed with Tracks B/C/D and
               ultimately git tag v0.phase6.
+
+2026-05-13  Phase 6 Track B complete — Refresh UX (button + 3-mode toggle).
+            Files touched:
+              config.py — added REFRESH_MODE_PATH (~/.erp_model/refresh_mode.json),
+                REFRESH_MODES tuple ("manual", "local", "cloud"), and
+                DEFAULT_REFRESH_MODE constant. No behaviour change to
+                any existing code path.
+              main.py:cmd_update_all_markets — now returns the per-market
+                results list at the end (was implicit None). Backwards
+                compatible: existing CLI callers ignore the return value;
+                server.py uses it to build a JSON response.
+              server.py — three new endpoints + helpers:
+                * POST /api/update-all  — server-side equivalent of CLI
+                  `python main.py --update --all-markets`. Honors
+                  ?force=true to override same-day skip. Catches the
+                  cmd_update_all_markets `SystemExit(1)` (every-market-
+                  failed path) so the Flask process keeps running.
+                  Returns {results:[…], summary:{ok,skipped,failed,total,force}}.
+                * GET  /api/auto-refresh — returns {mode, launchd,
+                  snapshot_has_cron, modes}. Reads ~/.erp_model/refresh_mode.json
+                  (defaults to "manual" if missing); reads launchd state
+                  via _auto_update_state(); detects cron in snapshot.yml
+                  by scanning uncommented lines for "cron:".
+                * POST /api/auto-refresh — body {mode}; persists to
+                  refresh_mode.json. For mode=local/manual shells out to
+                  `sys.executable main.py --auto-update on/off` (reuses
+                  all existing launchctl logic, no duplication). For
+                  mode=cloud returns the YAML diff to paste into
+                  snapshot.yml (or a "already configured" note if cron
+                  is already present). Rejects invalid modes with 400.
+              erp_dashboard.html — extended #erp-market-strip inline JS
+                strip with three new elements:
+                * [↻ Refresh now] button → POST /api/update-all, shows
+                  toast with "ok / skipped / failed" counts, reloads
+                  page on success.
+                * [Auto-refresh ⚙ ▾] <select> → 3 options (Manual,
+                  Local-daily, Cloud-nightly) with hover tooltips
+                  describing the laptop/cloud trade-off. Initial value
+                  loaded from GET /api/auto-refresh.
+                * Cloud-mode modal (#erp-cloud-modal) — opens on
+                  Cloud-nightly selection with the YAML diff + "Copy
+                  YAML" / "Close" buttons. Inline CSS (no external
+                  stylesheet, no React bundle changes).
+              tests/test_refresh_endpoint.py (NEW) — first test file in
+                the repo. unittest module with 3 cases (GET defaults,
+                POST cloud round-trip + persistence, POST invalid mode →
+                400). Uses unittest.mock to redirect REFRESH_MODE_PATH
+                to a tempdir so the developer's real file isn't touched.
+                Run: `python -m unittest tests.test_refresh_endpoint`.
+              SHARED_NOTES.md (this entry). Agent 1/2/3/4 sections
+                untouched.
+            Direct answer to "if I set auto-refresh, does it update on
+              GitHub or do I need my laptop open?":
+              | Mode          | Where it runs        | Laptop on? | Refreshes              |
+              | Manual        | Local Flask (button) | Yes        | ~/erp_model.db          |
+              | Local-daily   | macOS launchd plist  | Yes (18:00)| ~/erp_model.db          |
+              | Cloud-nightly | GitHub Actions       | NO         | docs/data/*.json on main|
+              The dashboard tooltip on each dropdown option carries the
+              same message inline.
+            Verification:
+              [✓] python -m unittest tests.test_refresh_endpoint → 3 tests
+                  pass (GET defaults, POST cloud, POST invalid → 400).
+              [✓] ruff check . → All checks passed (0 findings).
+              [✓] Live smoke (Flask on :5099, curl):
+                  - GET /api/auto-refresh → 200, mode=manual,
+                    launchd={installed:false, loaded:false},
+                    snapshot_has_cron=false.
+                  - POST {mode:"manual"} → 200, shells out to
+                    `main.py --auto-update off`, returncode=0,
+                    stdout: "Auto-update already OFF".
+                  - POST {mode:"cloud"} → 200, returns yaml_diff
+                    (workflow_dispatch + cron '0 22 * * *') and a
+                    one-paragraph note explaining the cloud trade-off.
+                  - POST {mode:"bogus"} → 400 with valid-modes list.
+                  - GET / → serves erp_dashboard.html with new CSS in
+                    <head>.
+              [-] /api/update-all live invocation not exercised in this
+                  session (would refetch all 9 markets, 15+ s, network-
+                  flaky on EM); route structure verified by test client,
+                  wraps the well-tested cmd_update_all_markets.
+              [-] CI Lint + Smoke green on push (paths-ignore covers
+                  erp_dashboard.html, so only server.py + main.py +
+                  config.py edits exercise the workflows; smoke golden
+                  guard pinned at 4.96% unchanged).
+            Deferred (not in Track B scope):
+              - Track C (CN_CSI display relabel + empty-history fallback).
+              - Track D (snapshot.yml cron block — gated on whether the
+                user actually selects Cloud-nightly in the new dropdown).
+              - /api/update-all could stream JSON-Lines progress instead
+                of returning a single blob. Not needed today; the UI
+                button shows a "Refreshing all markets…" toast and the
+                user can watch the Flask server's stdout for per-market
+                detail.
+              - Token-based auth on /api/update-all. Plan flagged the
+                DoS risk if Flask is ever exposed beyond localhost;
+                deferred consistent with Phase 6 plan §Risks.
+            Recommend: try the new button + dropdown in the dashboard at
+              http://localhost:5001/ ; then proceed with Track C / D on
+              go.
 ```

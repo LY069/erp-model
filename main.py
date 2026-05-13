@@ -250,6 +250,8 @@ def cmd_update_all_markets(args):
         print("[FATAL] Every market failed — exiting 1.")
         sys.exit(1)
 
+    return results
+
 
 def cmd_report(args):
     """Print formatted report from the database."""

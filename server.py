@@ -27,7 +27,10 @@ THIS_DIR = Path(__file__).resolve().parent
 os.chdir(THIS_DIR)
 sys.path.insert(0, str(THIS_DIR))
 
-from config import DEFAULT_PAYOUT_RATIO
+from config import (
+    DEFAULT_PAYOUT_RATIO,
+    REFRESH_MODE_PATH, REFRESH_MODES, DEFAULT_REFRESH_MODE,
+)
 from markets_config import MARKETS, get_market
 from database import (
     init_db, upsert_inputs, upsert_computation, upsert_forecast, upsert_breakeven,
@@ -39,6 +42,9 @@ from erp_calculator import (
     forecast_erp, compute_breakeven_growth,
     NORMAL_ERP_LONGRUN, NORMAL_ERP_DECADE
 )
+import subprocess
+from types import SimpleNamespace
+from main import cmd_update_all_markets, _auto_update_state
 
 app = Flask(__name__)
 
@@ -560,6 +566,161 @@ def log():
     df = get_log(limit, market=market)
     df["created_at"] = df["created_at"].astype(str)
     return _ok({"data": df.to_dict(orient="records")})
+
+
+# ── Phase 6 Track B: refresh UX endpoints ─────────────────────────
+# Two endpoints power the dashboard's [↻ Refresh now] button and the
+# [Auto-refresh ⚙ ▾] dropdown:
+#   POST /api/update-all      — server-side equivalent of `python main.py
+#                                --update --all-markets`. Honors
+#                                ?force=true to override the same-day skip.
+#   GET  /api/auto-refresh    — returns {mode, launchd}.
+#   POST /api/auto-refresh    — body {mode}; persists, applies side effects
+#                                (Local-daily: launchctl on/off via
+#                                main.py --auto-update; Cloud-nightly:
+#                                returns the YAML diff for snapshot.yml).
+
+_SNAPSHOT_YML = THIS_DIR / ".github" / "workflows" / "snapshot.yml"
+
+_CLOUD_CRON_YAML = """\
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 22 * * *'   # 22:00 UTC daily — after Asia close, no laptop needed
+"""
+
+def _read_refresh_mode() -> str:
+    """Read user's selected refresh mode from disk. Defaults to manual."""
+    try:
+        data = json.loads(REFRESH_MODE_PATH.read_text())
+        mode = data.get("mode", DEFAULT_REFRESH_MODE)
+        return mode if mode in REFRESH_MODES else DEFAULT_REFRESH_MODE
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return DEFAULT_REFRESH_MODE
+
+
+def _write_refresh_mode(mode: str) -> None:
+    REFRESH_MODE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    REFRESH_MODE_PATH.write_text(json.dumps({"mode": mode}))
+
+
+def _snapshot_has_cron() -> bool:
+    """True if snapshot.yml already has a cron schedule line (uncommented)."""
+    try:
+        for line in _SNAPSHOT_YML.read_text().splitlines():
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            if "cron:" in stripped:
+                return True
+    except FileNotFoundError:
+        pass
+    return False
+
+
+@app.post("/api/update-all")
+def update_all():
+    """Run --update across every market. Server-side equivalent of the CLI
+    `python main.py --update --all-markets`. Returns the per-market summary.
+
+    Query: ?force=true to override the same-day skip (default: skip markets
+           whose latest row was written today).
+    """
+    force = request.args.get("force", "").lower() in ("1", "true", "yes")
+    args = SimpleNamespace(
+        method="fcfe", force=force, market=None,
+        buyback=None, growth=None, eps=None, payout=None, as_of=None,
+    )
+    try:
+        results = cmd_update_all_markets(args)
+    except SystemExit as e:
+        # cmd_update_all_markets calls sys.exit(1) if every market failed.
+        # Don't kill the Flask process; return a 500 with what we have.
+        return _err(f"All markets failed (exit {e.code}). Check server stdout.", 500)
+    return _ok({
+        "results": results or [],
+        "summary": {
+            "ok":      sum(1 for r in (results or []) if r["status"] == "ok"),
+            "skipped": sum(1 for r in (results or []) if r["status"] == "skipped"),
+            "failed":  sum(1 for r in (results or []) if r["status"] == "failed"),
+            "total":   len(results or []),
+            "force":   force,
+        },
+    })
+
+
+@app.get("/api/auto-refresh")
+def auto_refresh_get():
+    """Return the current refresh-mode selection + launchd state."""
+    return _ok({
+        "mode":     _read_refresh_mode(),
+        "launchd":  _auto_update_state(),
+        "snapshot_has_cron": _snapshot_has_cron(),
+        "modes":    list(REFRESH_MODES),
+    })
+
+
+@app.post("/api/auto-refresh")
+def auto_refresh_post():
+    """Set the refresh-mode selection. Body: {mode: "manual"|"local"|"cloud"}.
+
+    Side effects:
+      - manual: ensure launchd is unloaded (shells out to `main.py
+                --auto-update off`; idempotent if already off).
+      - local:  shells out to `main.py --auto-update on` to install +
+                bootstrap the launchd agent.
+      - cloud:  no local action — returns the YAML diff the user must
+                paste into .github/workflows/snapshot.yml (or notes that
+                cron is already configured).
+    """
+    body = request.get_json(silent=True) or {}
+    mode = body.get("mode")
+    if mode not in REFRESH_MODES:
+        return _err(f"mode must be one of {list(REFRESH_MODES)}; got {mode!r}")
+
+    _write_refresh_mode(mode)
+    detail: dict = {"mode": mode}
+
+    if mode == "manual":
+        proc = subprocess.run(
+            [sys.executable, str(THIS_DIR / "main.py"), "--auto-update", "off"],
+            capture_output=True, text=True,
+        )
+        detail["launchd_action"] = "unload"
+        detail["stdout"] = proc.stdout[-2000:]
+        detail["stderr"] = proc.stderr[-2000:]
+        detail["returncode"] = proc.returncode
+    elif mode == "local":
+        proc = subprocess.run(
+            [sys.executable, str(THIS_DIR / "main.py"), "--auto-update", "on"],
+            capture_output=True, text=True,
+        )
+        detail["launchd_action"] = "bootstrap"
+        detail["stdout"] = proc.stdout[-2000:]
+        detail["stderr"] = proc.stderr[-2000:]
+        detail["returncode"] = proc.returncode
+    elif mode == "cloud":
+        already = _snapshot_has_cron()
+        detail["snapshot_has_cron"] = already
+        if not already:
+            detail["yaml_diff"] = _CLOUD_CRON_YAML
+            detail["snapshot_path"] = str(
+                _SNAPSHOT_YML.relative_to(THIS_DIR)
+            )
+            detail["note"] = (
+                "Cloud-nightly runs in GitHub Actions; your laptop "
+                "doesn't need to be on. Paste the YAML above into "
+                ".github/workflows/snapshot.yml, replacing the existing "
+                "`on:` block, then commit and push."
+            )
+        else:
+            detail["note"] = (
+                "snapshot.yml already contains a cron schedule — you're "
+                "set up for Cloud-nightly. No edits needed."
+            )
+
+    detail["launchd"] = _auto_update_state()
+    return _ok(detail)
 
 
 # ── Entry Point ────────────────────────────────────────────────────
