@@ -2092,4 +2092,47 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
               confirm the new label appears in the source badge / title.
               Then proceed with Track D (or skip if you don't want
               Cloud-nightly).
+
+2026-05-14  Phase 6 Track D complete — Cloud-nightly snapshot cron.
+            Files touched:
+              .github/workflows/snapshot.yml — added `schedule: - cron:
+                '0 22 * * *'` alongside the existing workflow_dispatch
+                trigger. 22:00 UTC = after Asia close
+                (08:00 next-day Tokyo / 07:00 Shanghai), so the snapshot
+                picks up complete EOD prints for KR/JP/CN/IN/TW. The
+                existing manual-Run button still works.
+              SHARED_NOTES.md (this entry). Agent 1/2/3/4 sections
+                untouched.
+            Behaviour now:
+              The Snapshot workflow fires automatically once a day at
+              22:00 UTC, runs `seed_historical.py --market US` (cold-
+              start safety net), `main.py --update --all-markets`, and
+              `scripts/publish_snapshot.py`, then bot-commits
+              docs/data/*.json with `[skip ci]` so it doesn't retrigger
+              lint/smoke. Pages rebuilds on the docs commit. Your
+              laptop can be off. The Track B dashboard dropdown's
+              "Cloud-nightly" option already shows "snapshot.yml has
+              cron" (via /api/auto-refresh GET → snapshot_has_cron=true)
+              once this commit lands on main.
+            Verification:
+              [✓] ruff check . → All checks passed (0 findings; YAML
+                  unaffected by ruff but verified anyway).
+              [✓] Local YAML lint via `python3 -c 'import yaml;
+                  yaml.safe_load(open(".github/workflows/snapshot.yml"))'`
+                  → parses without error.
+              [✓] Track B's /api/auto-refresh `snapshot_has_cron` flag
+                  flips true on this commit (the helper greps for
+                  uncommented `cron:` lines).
+              [-] First scheduled run won't fire until ~22:00 UTC
+                  tonight; GitHub Actions cron can also be delayed by
+                  load-balancing on its first trigger. Verify in 24h
+                  via `git log docs/data/US.json` for a bot-commit
+                  dated after enable.
+            Phase 6 closed. All four tracks landed:
+              A — Damodaran cross-time reconciliation (7c79355 + a6c38e4)
+              B — Refresh UX (eccdcf4)
+              C — CN_CSI display + Yahoo empty-history hardening (f3abfeb)
+              D — snapshot.yml cron (this commit)
+            Recommend: git tag v0.phase6 && git push origin v0.phase6.
+            Next sessions can start fresh — no Phase 6 carry-over.
 ```

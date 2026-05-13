@@ -1,7 +1,12 @@
 name: Snapshot
 
 on:
-  workflow_dispatch:   # manual only — no cron (Mode B per Phase 5b handoff)
+  workflow_dispatch:
+  schedule:
+    # 22:00 UTC daily — chosen to land AFTER Asia close (08:00 next-day Tokyo / 07:00 Shanghai),
+    # so the snapshot picks up complete EOD prints for KR/JP/CN/IN/TW.
+    # Cloud-nightly mode (Phase 6 Track B dashboard toggle); your laptop can be off.
+    - cron: '0 22 * * *'
 
 permissions:
   contents: write      # needed to push the docs/data/* commit back to main
