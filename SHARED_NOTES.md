@@ -1832,4 +1832,102 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
                   actions/setup-python@v5; non-functional, will need upgrade
                   before 2026-06-02. Deferred.
             Recommend: git tag v0.phase5c
+
+2026-05-13  Phase 6 Track A complete — Solver vs Damodaran reconciliation
+            (cross-time methodology check; solver UNCHANGED per scope).
+            Files touched:
+              scripts/reconcile_damodaran.py (NEW) — cross-time
+                reconciliation script. Loads histimpl_cache.xls (or
+                downloads from DAMODARAN_URL = pages.stern.nyu.edu/~adamodar/
+                pc/datasets/histimpl.xls — refreshed annually by Damodaran,
+                last 2026-01-09). For each of the last N annual rows
+                reproduces our DDM solver against his published Implied
+                ERP, and cross-checks the hardcoded Jan 2026 inputs in
+                validate_against_damodaran against histimpl's latest row.
+                Re-runnable annually.
+              erp_calculator.py:734 — validate_against_damodaran() print
+                block now shows the explicit reconciliation header, both
+                values (Damodaran 4.23% / our FCFE 4.96%, gap +73bp on
+                the hardcoded point), the input-transcription explanation
+                of the 73bp gap, and the cross-time -32bp DDM-vs-FCFE
+                methodology note.
+                Solver math (compute_erp_fcfe, build_growth_schedule_*,
+                project_cash_flows, _objective) UNCHANGED per user
+                instruction ("Do not touch the solver's methodology").
+              .github/workflows/smoke.yml — golden guard comment cites
+                the cross-time verdict + the reconcile script + the
+                input-transcription finding. Pinned value
+                (expected = 0.0496) and tolerance (±0.0005) UNCHANGED.
+              SHARED_NOTES.md (this entry). Agent 1/2/3/4 sections
+                untouched.
+            Investigation finding (HEADLINE):
+              FCFE solver is methodology-correct. The 73bp Jan 2026 gap
+              is dominated by INPUT TRANSCRIPTION, not a model defect.
+              The hardcoded S&P 5881.63 in validate_against_damodaran is
+              early-January 2026 spot; Damodaran's 2025-row in histimpl
+              uses the year-end 2025 close of 6845.50. Feeding our FCFE
+              solver the corrected S&P returns 4.2689% — only 3.9bp
+              from Damodaran's published 4.23%. The residual ~4bp is
+              consistent with minor input rounding (EPS, growth, T-bond).
+            Cross-time table (last 15 years, DDM reproduction):
+              Year  Damodaran     Ours (DDM)      Δ (bp)
+              2011    6.0100%       6.6615%        +65.1
+              2012    5.7800%       5.9612%        +18.1
+              2013    4.9600%       5.0834%        +12.3
+              2014    5.7800%       5.5556%        -22.4
+              2015    6.1200%       5.7997%        -32.0
+              2016    5.6900%       5.4116%        -27.8
+              2017    5.0800%       4.7100%        -37.0
+              2018    5.9600%       5.8222%        -13.8
+              2019    5.2000%       5.0239%        -17.6
+              2020    4.7200%       3.8940%        -82.6
+              2021    4.2400%       3.6014%        -63.9
+              2022    5.9400%       5.2734%        -66.7
+              2023    4.6000%       4.0957%        -50.4
+              2024    4.3300%       3.7209%        -60.9
+              2025    4.2300%       3.5938%        -63.6
+              n=15  median_Δ=-32.0bp  mean|Δ|=42.3bp  max|Δ|=82.6bp
+              Sign pattern: 2011-2013 positive, 2014→2025 negative.
+              That sign flip ~2014 IS Damodaran's documented shift from
+              DDM-style implied ERP toward FCFE-with-payout-ramp. Our
+              DDM reproduction is structurally lower CF (raw div+buyback
+              yield) than his FCFE (EPS × payout × ramped growth) →
+              lower implied r → lower ERP → negative delta. This is
+              expected behaviour, not a bug; it confirms the FCFE method
+              is the right one to use against post-2014 Damodaran values.
+            Classification: input_transcription (Jan 2026 gap) + mixed
+              cross-time (DDM-vs-FCFE methodology shift visible in the
+              sign flip ~2014). FCFE solver itself is correct.
+            Verification:
+              [✓] python3 scripts/reconcile_damodaran.py --years 15 →
+                  cross-time table + Jan 2026 check + VERDICT printed
+                  (66 years 1960–2025 loaded from histimpl_cache.xls).
+              [✓] python3 main.py --validate → exits 0; print block
+                  cites both values + input-transcription explanation
+                  + cross-time -32bp note.
+              [✓] Local smoke guard: 4.9598% (delta=0.000002 < 5e-4
+                  against pinned expected 0.0496). Guard unchanged.
+              [✓] ruff check . → All checks passed (0 findings).
+              [-] histimpl_cache.xls remains gitignored (line 14); not
+                  staged.
+              [-] Agent 1/2/3/4 sections of SHARED_NOTES untouched.
+            Deferred (not in Track A scope — require follow-up sessions):
+              - Re-pin the hardcoded Jan 2026 inputs in
+                validate_against_damodaran to histimpl's year-end 2025
+                values (S&P 6845.50 + matching EPS/payout/growth). This
+                would close the 73bp gap to 4bp in CI. Defer because it
+                shifts the smoke golden from 4.96% to ~4.27% — a
+                deliberate decision the user should make.
+              - Consider switching seed_historical.py + reconcile_damodaran
+                cross-time path from DDM to FCFE for post-2014 years to
+                align with Damodaran's current methodology. Would close
+                the -32bp median delta for the recent regime.
+              - Any solver changes (e.g. payout-ramp option, mid-year TV).
+                None needed based on findings above, but the door is open.
+              - Tracks B (Refresh UX), C (CN_CSI relabel + NaN hardening),
+                D (snapshot.yml cron — gated on Track B cloud-nightly
+                opt-in).
+            Recommend: review the cross-time finding above; if approved,
+              the follow-up session can proceed with Tracks B/C/D and
+              ultimately git tag v0.phase6.
 ```

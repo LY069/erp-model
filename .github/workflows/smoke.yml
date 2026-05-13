@@ -38,11 +38,19 @@ jobs:
         run: python main.py --validate
 
       - name: Golden-value regression guard (Jan 2026 US ERP)
-        # Asserts the solver deterministically reproduces 4.96% for Damodaran's
-        # Jan 2026 inputs. Note: Damodaran's own spreadsheet yields 4.23% —
-        # the 0.73pp gap is a known modeling difference documented by --validate
-        # itself ("Our result: 4.96%, Expected: ~4.23%"). The guard catches
-        # unintentional solver regressions, not the pre-existing gap.
+        # Asserts the solver deterministically reproduces 4.96% for the
+        # hardcoded Jan 2026 inputs in validate_against_damodaran. Damodaran's
+        # published 2025 Implied ERP (histimpl.xls, refreshed Jan 2026) is
+        # 4.23%, and Phase 6 Track A (scripts/reconcile_damodaran.py +
+        # SHARED_NOTES 2026-05-13) showed the 73bp 'gap' is dominated by
+        # input transcription: the hardcoded S&P 5881.63 is early-Jan 2026
+        # spot, while Damodaran used the year-end 2025 close 6845.50.
+        # Feeding the correct S&P returns 4.27% (~4bp from his 4.23%).
+        # Per Track A scope the solver and the hardcoded inputs are
+        # unchanged; this guard catches unintentional solver regressions,
+        # not the documented input-transcription gap. Re-run
+        # reconcile_damodaran.py after Damodaran refreshes histimpl.xls
+        # (annually, around Jan 9) to confirm the gap hasn't shifted.
         # See: erp_calculator.py validate_against_damodaran() line ~734.
         run: |
           python - <<'EOF'
