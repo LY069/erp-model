@@ -1912,21 +1912,23 @@ _Append one line here at the end of every Claude session. Format: `YYYY-MM-DD  P
                   staged.
               [-] Agent 1/2/3/4 sections of SHARED_NOTES untouched.
             Deferred (not in Track A scope — require follow-up sessions):
-              - Re-pin the hardcoded Jan 2026 inputs in
-                validate_against_damodaran to histimpl's year-end 2025
-                values (S&P 6845.50 + matching EPS/payout/growth). This
-                would close the 73bp gap to 4bp in CI. Defer because it
-                shifts the smoke golden from 4.96% to ~4.27% — a
-                deliberate decision the user should make.
-              - Consider switching seed_historical.py + reconcile_damodaran
-                cross-time path from DDM to FCFE for post-2014 years to
-                align with Damodaran's current methodology. Would close
-                the -32bp median delta for the recent regime.
               - Any solver changes (e.g. payout-ramp option, mid-year TV).
                 None needed based on findings above, but the door is open.
               - Tracks B (Refresh UX), C (CN_CSI relabel + NaN hardening),
                 D (snapshot.yml cron — gated on Track B cloud-nightly
                 opt-in).
+            Principles re-confirmed during this track (project invariants):
+              - Never hand-patch a single market-data input (e.g. swap
+                the hardcoded S&P 5881.63 to 6845.50). If a value should
+                change, change it consistently at the source pipeline,
+                never one date at a time. The 73bp Jan 2026 gap stays
+                documented, not patched.
+              - Never mix FCFE and DDM within a single time series.
+                seed_historical.py stays DDM end-to-end; FCFE is its
+                own (separate) series if/when built. A DDM reproduction
+                of Damodaran's post-2014 FCFE-era values is *expected*
+                to show a systematic delta — that's documentation, not
+                a methodology bug.
             Recommend: review the cross-time finding above; if approved,
               the follow-up session can proceed with Tracks B/C/D and
               ultimately git tag v0.phase6.
