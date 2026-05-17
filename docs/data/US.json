@@ -5,7 +5,7 @@
   "currency_symbol": "$",
   "data_quality": "full",
   "display_index_name": "S&P 500",
-  "last_updated": "2026-05-16T22:41:58+00:00",
+  "last_updated": "2026-05-17T22:51:25+00:00",
   "latest": {
     "date": "2025-12-31",
     "market": "US",
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "damodaran_histimpl",
     "growth_source": null,
-    "updated_at": 1778971300,
+    "updated_at": 1779058267,
     "currency": "USD",
     "implied_cost_of_equity": 0.07773772219115964,
     "implied_erp": 0.03593772219115964,
