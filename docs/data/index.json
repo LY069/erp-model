@@ -3,52 +3,52 @@
     "data_quality": "full",
     "name": "United States",
     "currency": "USD",
-    "last_updated": "2026-05-20T12:06:38+00:00",
+    "last_updated": "2026-05-20T23:10:32+00:00",
     "latest_date": "2026-05-20",
-    "latest_erp": 0.06750303445725064,
+    "latest_erp": 0.06743213682142762,
     "history_count": 1
   },
   "UK": {
     "data_quality": "full",
     "name": "United Kingdom",
     "currency": "GBP",
-    "last_updated": "2026-05-20T12:06:38+00:00",
+    "last_updated": "2026-05-20T23:10:32+00:00",
     "latest_date": "2026-05-20",
-    "latest_erp": 0.07357184270663106,
+    "latest_erp": 0.07296704416820249,
     "history_count": 1
   },
   "EU": {
     "data_quality": "full",
     "name": "Europe (STOXX 600)",
     "currency": "EUR",
-    "last_updated": "2026-05-20T12:06:38+00:00",
+    "last_updated": "2026-05-20T23:10:32+00:00",
     "latest_date": "2026-05-20",
-    "latest_erp": 0.07124482593038237,
+    "latest_erp": 0.07079719103066615,
     "history_count": 1
   },
   "JP": {
     "data_quality": "full",
     "name": "Japan (TOPIX)",
     "currency": "JPY",
-    "last_updated": "2026-05-20T12:06:38+00:00",
+    "last_updated": "2026-05-20T23:10:32+00:00",
     "latest_date": "2026-05-20",
-    "latest_erp": 0.054838459789101346,
+    "latest_erp": 0.054363553515696286,
     "history_count": 1
   },
   "KR": {
     "data_quality": "partial",
     "name": "Korea (KOSPI)",
     "currency": "KRW",
-    "last_updated": "2026-05-20T12:06:38+00:00",
+    "last_updated": "2026-05-20T23:10:32+00:00",
     "latest_date": "2026-05-20",
-    "latest_erp": 0.0372376870012289,
+    "latest_erp": 0.035980648424633166,
     "history_count": 1
   },
   "IN": {
     "data_quality": "partial",
     "name": "India (NIFTY 50)",
     "currency": "INR",
-    "last_updated": "2026-05-20T12:06:38+00:00",
+    "last_updated": "2026-05-20T23:10:32+00:00",
     "latest_date": "2026-05-20",
     "latest_erp": 0.05371698025390256,
     "history_count": 1
@@ -57,27 +57,18 @@
     "data_quality": "partial",
     "name": "Taiwan (TAIEX)",
     "currency": "TWD",
-    "last_updated": "2026-05-20T12:06:38+00:00",
+    "last_updated": "2026-05-20T23:10:32+00:00",
     "latest_date": "2026-05-20",
-    "latest_erp": 0.032377102492764195,
+    "latest_erp": 0.03237710249276419,
     "history_count": 1
   },
   "CN": {
     "data_quality": "fallback",
     "name": "China (MSCI China)",
     "currency": "CNY",
-    "last_updated": "2026-05-20T12:06:38+00:00",
+    "last_updated": "2026-05-20T23:10:32+00:00",
     "latest_date": "2026-05-20",
-    "latest_erp": 0.06839980985709408,
-    "history_count": 1
-  },
-  "CN_CSI": {
-    "data_quality": "fallback",
-    "name": "China (CSI 300 onshore)",
-    "currency": "CNY",
-    "last_updated": "2026-05-20T12:06:38+00:00",
-    "latest_date": "2026-05-20",
-    "latest_erp": 0.05119308291468774,
+    "latest_erp": 0.06837018000307818,
     "history_count": 1
   }
 }
