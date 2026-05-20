@@ -84,9 +84,16 @@ To publish:
    `https://<owner>.github.io/erp-model/` — no install, no terminal,
    always reflects the latest nightly snapshot.
 
-This path is read-only: viewers cannot run scenarios or trigger live
-refreshes. It's the safest option because the page never exposes the
-API to the public internet.
+The page includes an in-browser **scenario calculator**: viewers can
+click any market card to load that market's inputs (index level, total
+yield or trailing EPS, 5yr growth, 10yr risk-free), tweak them, and see
+the implied ERP recompute live. The solver runs entirely client-side
+(`docs/erp-solver.js`, a vanilla-JS port of the Damodaran 2-stage DDM),
+so no data leaves the browser and the API is never exposed publicly.
+
+Live data refresh isn't possible from the static page (the nightly
+GitHub Actions workflow handles that); for on-demand refresh use
+Option B below.
 
 ### Option B — Run the interactive server locally
 
