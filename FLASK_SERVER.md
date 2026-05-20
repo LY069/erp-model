@@ -52,7 +52,7 @@ If you see a green banner saying "Connected to ERP server at localhost:5001", th
 
 **Solution:**
 1. Check the terminal where you ran `python server.py` for error messages
-2. Make sure you're in the correct directory: `/sessions/eager-upbeat-darwin/mnt/ERP Model/`
+2. Make sure you're in the repo root (the directory containing `server.py`)
 3. Try again: `python server.py`
 
 ### Browser shows blank page or console errors
@@ -183,18 +183,9 @@ To run the server on a different port (e.g., 8000):
 python server.py 8000
 ```
 
-Then update the dashboard's API endpoint. Currently it's hardcoded to `http://localhost:5001` in `erp_dashboard.html`. To change it, edit `/erp-dashboard/src/api.ts`:
-
-```typescript
-const BASE = "http://localhost:8000/api";  // Change 5001 to your port
-```
-
-Then rebuild the bundle:
-```bash
-cd /sessions/eager-upbeat-darwin/erp-dashboard
-bash /sessions/eager-upbeat-darwin/mnt/.claude/skills/web-artifacts-builder/scripts/bundle-artifact.sh
-cp bundle.html /sessions/eager-upbeat-darwin/mnt/ERP\ Model/erp_dashboard.html
-```
+The dashboard fetches API endpoints as relative paths (`/api/...`),
+so it always talks to whatever port `server.py` is bound to — no
+rebuild needed when you change the port.
 
 ---
 
@@ -229,9 +220,9 @@ app.run(host="0.0.0.0", port=port, debug=True)  # debug=True
 ## Architecture
 
 ```
-erp_dashboard.html  (browser, opens as file://)
+erp_dashboard.html  (browser, served by Flask at /)
          │
-         │ fetch() to http://localhost:5001/api/*
+         │ fetch() to /api/* (relative — same origin as the page)
          │
     server.py (Flask)
          │
@@ -240,7 +231,9 @@ erp_dashboard.html  (browser, opens as file://)
          └── erp_calculator.py (solver engine)
 ```
 
-The React app in the HTML bundle is fully self-contained and requires no build step to modify the dashboard UI. To change the API endpoint or add new API calls, edit `/erp-dashboard/src/api.ts` and rebuild.
+The React app in the HTML bundle is fully self-contained — every API
+call uses a relative path, so the same file works whether the server
+is on port 5001, 8000, or behind a reverse proxy.
 
 ---
 
@@ -248,17 +241,11 @@ The React app in the HTML bundle is fully self-contained and requires no build s
 
 ### Make changes to the React app
 
-1. Edit files in `/erp-dashboard/src/`
-2. Rebuild the bundle:
-   ```bash
-   cd /erp-dashboard
-   bash /sessions/eager-upbeat-darwin/mnt/.claude/skills/web-artifacts-builder/scripts/bundle-artifact.sh
-   ```
-3. Copy to the ERP Model folder:
-   ```bash
-   cp /erp-dashboard/bundle.html /sessions/eager-upbeat-darwin/mnt/ERP\ Model/erp_dashboard.html
-   ```
-4. Reload the dashboard in your browser (Ctrl+R)
+The dashboard ships as a single bundled HTML file (`erp_dashboard.html`).
+The React source used to produce that bundle is not checked into this
+repo — see SHARED_NOTES.md if you need to rebuild it from scratch.
+For most edits (styling, API calls, copy), editing `erp_dashboard.html`
+directly and reloading the browser is the fastest path.
 
 ### Make changes to the Flask server
 

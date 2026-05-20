@@ -423,8 +423,19 @@ _PLIST_DST = Path.home() / "Library" / "LaunchAgents" / f"{_AUTO_LABEL}.plist"
 def _auto_update_state() -> dict:
     """Inspect launchd + filesystem for the current auto-update state.
 
-    Returns: {"installed": bool, "loaded": bool, "uid": int, "target": str}.
+    Returns: {"installed": bool, "loaded": bool, "uid": int|None, "target": str,
+              "platform": str, "supported": bool}.
+
+    On non-macOS platforms, launchd doesn't exist; returns a sentinel
+    state so callers (notably the /api/auto-refresh endpoint) can degrade
+    gracefully instead of 500-ing.
     """
+    if sys.platform != "darwin":
+        return {
+            "installed": False, "loaded": False,
+            "uid": None, "target": "",
+            "platform": sys.platform, "supported": False,
+        }
     uid = os.getuid()
     target = f"gui/{uid}/{_AUTO_LABEL}"
     installed = _PLIST_DST.exists()
@@ -432,7 +443,11 @@ def _auto_update_state() -> dict:
         ["launchctl", "print", target],
         capture_output=True, text=True
     ).returncode == 0
-    return {"installed": installed, "loaded": loaded, "uid": uid, "target": target}
+    return {
+        "installed": installed, "loaded": loaded,
+        "uid": uid, "target": target,
+        "platform": "darwin", "supported": True,
+    }
 
 
 def cmd_auto_update(args):
@@ -445,6 +460,14 @@ def cmd_auto_update(args):
     """
     action = args.auto_update
     state = _auto_update_state()
+    if not state["supported"]:
+        print(
+            f"[INFO] --auto-update is macOS-only (launchd); current platform "
+            f"is {state['platform']}. Use the GitHub Actions snapshot workflow "
+            f"(.github/workflows/snapshot.yml) for scheduled refreshes instead.",
+            file=sys.stderr,
+        )
+        sys.exit(0 if action == "status" else 1)
     domain = f"gui/{state['uid']}"
     target = state["target"]
 
