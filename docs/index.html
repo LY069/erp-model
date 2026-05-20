@@ -136,6 +136,107 @@
       padding: 1px 5px;
       font-size: 11px;
     }
+    .card.clickable { cursor: pointer; transition: box-shadow .15s ease; }
+    .card.clickable:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    #scenario {
+      margin-top: 36px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+    }
+    #scenario h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0 0 4px;
+    }
+    #scenario .blurb {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 16px;
+    }
+    .scenario-row {
+      display: grid;
+      grid-template-columns: 180px repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+    .scenario-row label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .scenario-row label .unit { color: #9ca3af; font-weight: normal; }
+    .scenario-row input,
+    .scenario-row select {
+      font-size: 14px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: #fff;
+      color: var(--text);
+      font-family: inherit;
+    }
+    .scenario-row input:focus,
+    .scenario-row select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    .scenario-actions { display: flex; gap: 10px; align-items: center; margin: 4px 0 14px; }
+    .scenario-actions button {
+      font-size: 13px;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface-alt);
+      color: var(--text-on-dark);
+      cursor: pointer;
+    }
+    .scenario-actions button.secondary {
+      background: #fff;
+      color: var(--text);
+    }
+    .scenario-actions .hint { font-size: 12px; color: var(--muted); }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+    }
+    .result-cell .k { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .result-cell .v { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .result-cell .v.big { font-size: 26px; }
+    .result-cell .delta { font-size: 11px; margin-top: 2px; }
+    .result-cell .delta.up { color: #059669; }
+    .result-cell .delta.down { color: var(--fallback); }
+    .scenario-error {
+      color: var(--fallback);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .scenario-breakdown {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+    .scenario-breakdown table {
+      border-collapse: collapse;
+      margin-top: 6px;
+      width: 100%;
+      max-width: 520px;
+    }
+    .scenario-breakdown th,
+    .scenario-breakdown td {
+      text-align: right;
+      padding: 3px 8px;
+      border-bottom: 1px dotted var(--border);
+    }
+    .scenario-breakdown th:first-child,
+    .scenario-breakdown td:first-child { text-align: left; }
   </style>
 </head>
 <body>
@@ -146,14 +247,66 @@
 
   <main>
     <div class="grid" id="grid"></div>
+
+    <section id="scenario" aria-label="Scenario calculator">
+      <h2>Scenario calculator</h2>
+      <p class="blurb">
+        Tweak the inputs to see how the implied ERP responds. Defaults come from the
+        latest published snapshot for the selected market. Click any card above to load
+        that market's inputs. Computed locally in your browser using a 2-stage augmented
+        DDM (the same solver as the Python backend).
+      </p>
+
+      <div class="scenario-row">
+        <label>
+          Market
+          <select id="sc-market"></select>
+        </label>
+        <label>
+          Index level <span class="unit">(local CCY)</span>
+          <input type="number" id="sc-index" step="0.01" />
+        </label>
+        <label id="sc-yield-wrap">
+          Total yield <span class="unit">(div + buyback, %)</span>
+          <input type="number" id="sc-yield" step="0.01" />
+        </label>
+        <label id="sc-eps-wrap" hidden>
+          Trailing EPS <span class="unit">(local CCY)</span>
+          <input type="number" id="sc-eps" step="0.01" />
+        </label>
+        <label>
+          5yr growth <span class="unit">(%)</span>
+          <input type="number" id="sc-growth" step="0.01" />
+        </label>
+        <label>
+          10yr risk-free <span class="unit">(%)</span>
+          <input type="number" id="sc-rfr" step="0.01" />
+        </label>
+      </div>
+
+      <div class="scenario-actions">
+        <button type="button" id="sc-compute">Compute</button>
+        <button type="button" id="sc-reset" class="secondary">Reset to snapshot</button>
+        <span class="hint" id="sc-hint">Live updates as you type.</span>
+      </div>
+
+      <div id="sc-error" class="scenario-error" hidden></div>
+
+      <div class="result-grid" id="sc-result" hidden></div>
+
+      <div class="scenario-breakdown" id="sc-breakdown" hidden></div>
+    </section>
+
     <footer>
-      Static read-only snapshot. For the interactive dashboard with scenario controls,
-      run <code>python server.py</code> and open
-      <code>http://localhost:5001/dashboard</code>.
-      Regenerate this page with <code>python scripts/publish_snapshot.py</code>.
+      Static daily snapshot — auto-refreshed at 22:00 UTC by GitHub Actions.
+      The scenario calculator runs entirely in your browser; no data is sent anywhere.
+      Source: <code>github.com/LY069/erp-model</code>.
+      For live data refresh or the full local dashboard, run
+      <code>python server.py</code> from a clone of the repo.
     </footer>
   </main>
 
+  <script src="./erp-solver.js"></script>
   <script src="./data/all.js"></script>
   <script>
     (function () {
@@ -229,7 +382,9 @@
           : '<div class="sparkline empty">sparkline needs ≥ 2 history points</div>';
 
         const card = document.createElement("div");
-        card.className = "card";
+        card.className = "card clickable";
+        card.setAttribute("data-market", code);
+        card.tabIndex = 0;
         card.innerHTML =
           '<div class="card-header">'
           +   '<div class="card-title">' + escapeHtml(payload.name || code)
@@ -256,6 +411,214 @@
         : "no snapshot loaded — generate with python scripts/publish_snapshot.py";
 
       ORDER.forEach(code => render(code, data[code]));
+
+      // ── Scenario calculator ────────────────────────────────────────
+      if (!window.ERPSolver) {
+        document.getElementById("scenario").hidden = true;
+      } else {
+        wireScenario();
+      }
+
+      function wireScenario() {
+        const sel    = document.getElementById("sc-market");
+        const idxEl  = document.getElementById("sc-index");
+        const ydEl   = document.getElementById("sc-yield");
+        const ydWrap = document.getElementById("sc-yield-wrap");
+        const epsEl  = document.getElementById("sc-eps");
+        const epsWrap= document.getElementById("sc-eps-wrap");
+        const grEl   = document.getElementById("sc-growth");
+        const rfrEl  = document.getElementById("sc-rfr");
+        const btn    = document.getElementById("sc-compute");
+        const resetB = document.getElementById("sc-reset");
+        const errEl  = document.getElementById("sc-error");
+        const resEl  = document.getElementById("sc-result");
+        const bkEl   = document.getElementById("sc-breakdown");
+
+        // Populate the dropdown with markets that have data
+        const have = ORDER.filter(c => data[c] && data[c].latest);
+        if (!have.length) {
+          document.getElementById("scenario").hidden = true;
+          return;
+        }
+        sel.innerHTML = have.map(c => {
+          const name = (data[c] && data[c].name) || c;
+          return '<option value="' + c + '">' + escapeHtml(name + " (" + c + ")") + '</option>';
+        }).join("");
+
+        // Track which method the current market uses, and the original
+        // year1/year2 detailed-schedule values so we can reproduce the
+        // snapshot exactly until the user edits growth.
+        let currentMethod = "ddm";
+        let snapshotY1 = null;
+        let snapshotY2 = null;
+        let snapshotPayout = 0.7785;
+        let lastGrowthInput = "";
+
+        function prefill(code) {
+          const payload = data[code] || {};
+          const l = payload.latest || {};
+          // Method = FCFE if trailing EPS available, else DDM (US case)
+          currentMethod = (l.trailing_eps != null) ? "fcfe" : "ddm";
+          snapshotY1 = l.year1_growth;
+          snapshotY2 = l.year2_growth;
+          snapshotPayout = l.payout_ratio != null ? l.payout_ratio : 0.7785;
+
+          if (currentMethod === "fcfe") {
+            ydWrap.hidden = true;
+            epsWrap.hidden = false;
+            epsEl.value = l.trailing_eps != null ? l.trailing_eps : "";
+          } else {
+            ydWrap.hidden = false;
+            epsWrap.hidden = true;
+            ydEl.value = l.total_yield != null ? (l.total_yield * 100).toFixed(4) : "";
+          }
+          idxEl.value = l.index_level != null ? l.index_level : "";
+          grEl.value  = l.analyst_5yr_growth != null ? (l.analyst_5yr_growth * 100).toFixed(4) : "";
+          rfrEl.value = l.rfr_rate != null ? (l.rfr_rate * 100).toFixed(4) : "";
+          lastGrowthInput = grEl.value;
+          recompute();
+        }
+
+        function readNum(el) {
+          const v = parseFloat(el.value);
+          return isFinite(v) ? v : NaN;
+        }
+
+        function recompute() {
+          errEl.hidden = true;
+          const code = sel.value;
+          const payload = data[code] || {};
+          const sym = payload.currency_symbol || "";
+          const cur = payload.currency || "";
+          const snapErp = (payload.latest || {}).implied_erp;
+
+          const idx = readNum(idxEl);
+          const gr  = readNum(grEl) / 100;
+          const rfr = readNum(rfrEl) / 100;
+
+          if (!isFinite(idx) || idx <= 0 || !isFinite(gr) || !isFinite(rfr)) {
+            resEl.hidden = true;
+            bkEl.hidden = true;
+            return;
+          }
+
+          // If user hasn't touched growth, use the detailed schedule
+          // (year1/year2) so the result matches the stored snapshot
+          // exactly. Once they edit growth, fall back to the simple
+          // analyst-then-ramp schedule.
+          const growthTouched = grEl.value !== lastGrowthInput;
+          let r;
+          try {
+            if (currentMethod === "fcfe") {
+              const eps = readNum(epsEl);
+              if (!isFinite(eps)) {
+                resEl.hidden = true; bkEl.hidden = true; return;
+              }
+              r = window.ERPSolver.computeFcfe({
+                indexLevel: idx,
+                trailingEps: eps,
+                growthHigh: gr,
+                rfr: rfr,
+                payoutRatio: snapshotPayout,
+                year1Growth: growthTouched ? null : snapshotY1,
+                year2Growth: growthTouched ? null : snapshotY2
+              });
+            } else {
+              const yd = readNum(ydEl) / 100;
+              if (!isFinite(yd)) {
+                resEl.hidden = true; bkEl.hidden = true; return;
+              }
+              r = window.ERPSolver.computeDdm({
+                indexLevel: idx, totalYield: yd, growthHigh: gr, rfr: rfr
+              });
+            }
+          } catch (e) {
+            errEl.textContent = "Solver: " + e.message;
+            errEl.hidden = false;
+            resEl.hidden = true;
+            bkEl.hidden = true;
+            return;
+          }
+
+          const deltaBp = snapErp != null && isFinite(snapErp)
+            ? Math.round((r.impliedErp - snapErp) * 10000)
+            : null;
+          const deltaHtml = deltaBp == null
+            ? ""
+            : '<div class="delta ' + (deltaBp >= 0 ? "up" : "down") + '">'
+              + (deltaBp >= 0 ? "+" : "") + deltaBp + " bp vs snapshot"
+              + "</div>";
+
+          resEl.hidden = false;
+          resEl.innerHTML =
+            '<div class="result-cell">'
+            +   '<div class="k">Implied ERP</div>'
+            +   '<div class="v big">' + fmtPct(r.impliedErp) + '</div>'
+            +   deltaHtml
+            + '</div>'
+            + '<div class="result-cell">'
+            +   '<div class="k">Implied cost of equity</div>'
+            +   '<div class="v">' + fmtPct(r.impliedR) + '</div>'
+            + '</div>'
+            + '<div class="result-cell">'
+            +   '<div class="k">Method</div>'
+            +   '<div class="v">' + escapeHtml(r.method.toUpperCase()) + '</div>'
+            + '</div>'
+            + '<div class="result-cell">'
+            +   '<div class="k">Solver iterations</div>'
+            +   '<div class="v">' + r.solverIterations + '</div>'
+            + '</div>';
+
+          bkEl.hidden = false;
+          const rows = r.cashFlows.map((cf, i) => {
+            const g = r.growthRates[i];
+            return '<tr><td>Year ' + (i + 1) + '</td>'
+                 + '<td>' + (g * 100).toFixed(2) + '%</td>'
+                 + '<td>' + fmtIndex(cf, sym) + '</td></tr>';
+          }).join("");
+          bkEl.innerHTML =
+            'Cash-flow projection (' + escapeHtml(cur) + ', stage 1, '
+            + r.cashFlows.length + ' years):'
+            + '<table>'
+            +   '<thead><tr><th>Year</th><th>Growth</th><th>Cash flow</th></tr></thead>'
+            +   '<tbody>' + rows + '</tbody>'
+            + '</table>'
+            + 'Terminal value: ' + fmtIndex(r.terminalValue, sym)
+            + ' &middot; PV stage 1: ' + fmtIndex(r.pvStage1, sym)
+            + ' &middot; PV terminal: ' + fmtIndex(r.pvTerminal, sym);
+        }
+
+        sel.addEventListener("change", () => prefill(sel.value));
+        [idxEl, ydEl, epsEl, grEl, rfrEl].forEach(el => {
+          el.addEventListener("input", debounce(recompute, 150));
+        });
+        btn.addEventListener("click", recompute);
+        resetB.addEventListener("click", () => prefill(sel.value));
+
+        // Clicking a card jumps to scenario panel and prefills that market.
+        grid.addEventListener("click", e => {
+          const card = e.target.closest && e.target.closest(".card.clickable");
+          if (!card) return;
+          const code = card.getAttribute("data-market");
+          if (!code || !have.includes(code)) return;
+          sel.value = code;
+          prefill(code);
+          document.getElementById("scenario").scrollIntoView({behavior: "smooth", block: "start"});
+        });
+
+        // Initial prefill — first market that has data (US if present).
+        sel.value = have[0];
+        prefill(have[0]);
+      }
+
+      function debounce(fn, ms) {
+        let t;
+        return function () {
+          const args = arguments, self = this;
+          clearTimeout(t);
+          t = setTimeout(() => fn.apply(self, args), ms);
+        };
+      }
     })();
   </script>
 </body>

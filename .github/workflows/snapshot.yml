@@ -42,7 +42,12 @@ jobs:
       - name: Update all markets
         # Exits 0 unless every market fails (main.py:249).
         # EM markets may log warnings — that's expected and non-fatal.
-        run: python main.py --update --all-markets
+        # --force bypasses the skip-if-today check that the seed step
+        # trips for US: seed_historical.py writes rows with updated_at =
+        # run timestamp, which fools the idempotency guard into skipping
+        # the live US update. Without --force, US stays stuck at the
+        # seed's year-end date.
+        run: python main.py --update --all-markets --force
 
       - name: Publish snapshot to docs/data/
         # Exits 0 if at least one market published (scripts/publish_snapshot.py:150).
