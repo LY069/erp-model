@@ -57,9 +57,59 @@ For a browser-based dashboard with real-time charts and scenario analysis:
    python server.py
    ```
 
-2. **Open `erp_dashboard.html` in your browser** — it will automatically connect to the local server at `http://localhost:5001`.
+2. A browser tab opens automatically at `http://localhost:5001`. The
+   dashboard talks to the local server over `/api/...` relative paths,
+   so no separate page-open step is needed.
 
 For troubleshooting, setup help, and API documentation, see **[FLASK_SERVER.md](FLASK_SERVER.md)**.
+
+---
+
+## Sharing With Colleagues
+
+Two ready-made paths, depending on what your colleagues need.
+
+### Option A — Read-only nightly snapshot (zero setup for the audience)
+
+The repo already ships a static snapshot site at `docs/` and a nightly
+workflow (`.github/workflows/snapshot.yml`) that refreshes all 9
+markets and pushes the JSON to `docs/data/`.
+
+To publish:
+
+1. In GitHub, go to **Settings → Pages**.
+2. Source: **Deploy from a branch**.
+3. Branch: `main`, folder: `/docs`. Save.
+4. After ~1 minute, your colleagues can open
+   `https://<owner>.github.io/erp-model/` — no install, no terminal,
+   always reflects the latest nightly snapshot.
+
+This path is read-only: viewers cannot run scenarios or trigger live
+refreshes. It's the safest option because the page never exposes the
+API to the public internet.
+
+### Option B — Run the interactive server locally
+
+Each colleague who needs scenario analysis or on-demand refresh runs:
+
+```bash
+git clone <repo-url> && cd erp-model
+pip install -r requirements.txt
+python seed_historical.py --market US
+python server.py
+```
+
+The server binds to `0.0.0.0:5001` by default, so a single person on
+the team LAN can also share their session: have colleagues open
+`http://<that-machine-ip>:5001`. **Note:** there is no authentication
+in front of the API — only do this on a trusted network.
+
+For Windows / Linux colleagues: the `--auto-update` launchd toggle is
+macOS-only, but everything else (live refresh, scenarios, history,
+charts, CSV export) works cross-platform. For scheduled refreshes off
+macOS, use the GitHub Actions snapshot workflow (Option A) or your
+OS's native scheduler (Task Scheduler / cron) to run
+`python main.py --update --all-markets`.
 
 ---
 

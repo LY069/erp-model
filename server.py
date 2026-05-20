@@ -682,23 +682,39 @@ def auto_refresh_post():
     detail: dict = {"mode": mode}
 
     if mode == "manual":
-        proc = subprocess.run(
-            [sys.executable, str(THIS_DIR / "main.py"), "--auto-update", "off"],
-            capture_output=True, text=True,
-        )
-        detail["launchd_action"] = "unload"
-        detail["stdout"] = proc.stdout[-2000:]
-        detail["stderr"] = proc.stderr[-2000:]
-        detail["returncode"] = proc.returncode
+        if sys.platform != "darwin":
+            detail["launchd_action"] = "skipped"
+            detail["note"] = (
+                f"No local scheduler to unload on {sys.platform}; "
+                f"refresh mode recorded as manual."
+            )
+        else:
+            proc = subprocess.run(
+                [sys.executable, str(THIS_DIR / "main.py"), "--auto-update", "off"],
+                capture_output=True, text=True,
+            )
+            detail["launchd_action"] = "unload"
+            detail["stdout"] = proc.stdout[-2000:]
+            detail["stderr"] = proc.stderr[-2000:]
+            detail["returncode"] = proc.returncode
     elif mode == "local":
-        proc = subprocess.run(
-            [sys.executable, str(THIS_DIR / "main.py"), "--auto-update", "on"],
-            capture_output=True, text=True,
-        )
-        detail["launchd_action"] = "bootstrap"
-        detail["stdout"] = proc.stdout[-2000:]
-        detail["stderr"] = proc.stderr[-2000:]
-        detail["returncode"] = proc.returncode
+        if sys.platform != "darwin":
+            detail["launchd_action"] = "skipped"
+            detail["note"] = (
+                f"Local-daily auto-refresh uses macOS launchd, but this "
+                f"server is running on {sys.platform}. Use Cloud-nightly "
+                f"(GitHub Actions) or run `python main.py --update` from a "
+                f"system scheduler (cron/Task Scheduler)."
+            )
+        else:
+            proc = subprocess.run(
+                [sys.executable, str(THIS_DIR / "main.py"), "--auto-update", "on"],
+                capture_output=True, text=True,
+            )
+            detail["launchd_action"] = "bootstrap"
+            detail["stdout"] = proc.stdout[-2000:]
+            detail["stderr"] = proc.stderr[-2000:]
+            detail["returncode"] = proc.returncode
     elif mode == "cloud":
         already = _snapshot_has_cron()
         detail["snapshot_has_cron"] = already

@@ -2,15 +2,11 @@
 
 ## 30 Second Setup
 
-### Option A: Using bash script (recommended)
 ```bash
-cd "/sessions/eager-upbeat-darwin/mnt/ERP Model"
-./start_server.sh
-```
-
-### Option B: Direct Python
-```bash
-cd "/sessions/eager-upbeat-darwin/mnt/ERP Model"
+git clone https://github.com/LY069/erp-model.git
+cd erp-model
+pip install -r requirements.txt
+python seed_historical.py --market US   # one-time: load 65 years of US history
 python server.py
 ```
 
@@ -18,21 +14,17 @@ You should see:
 ```
 ╔══════════════════════════════════════════════════╗
 ║    ERP Model Server  →  http://localhost:5001    ║
-║    Open erp_dashboard.html in your browser       ║
 ║    Press Ctrl+C to stop                          ║
 ╚══════════════════════════════════════════════════╝
 ```
 
-## Open the Dashboard
+A browser tab opens automatically at `http://localhost:5001`. If not,
+open that URL manually.
 
-**Open in your browser:** `erp_dashboard.html` (in the same directory)
-
-Or open directly from file:
-```
-file:///sessions/eager-upbeat-darwin/mnt/ERP Model/erp_dashboard.html
-```
-
-You should see a **green banner** saying "Connected to ERP server at localhost:5001". If you see a red banner, the server isn't running — go back to Step 1.
+**Looking for a no-install option?** Once GitHub Pages is enabled in
+the repo settings (Settings → Pages → Source: `main` branch / `/docs`
+folder), the nightly snapshot is browsable at
+`https://<owner>.github.io/erp-model/` — no Python, no setup.
 
 ## What You Can Do
 
