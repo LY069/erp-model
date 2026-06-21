@@ -5,9 +5,9 @@
   "currency_symbol": "\u00a5",
   "data_quality": "fallback",
   "display_index_name": "MSCI China",
-  "last_updated": "2026-06-19T22:53:57+00:00",
+  "last_updated": "2026-06-21T23:09:50+00:00",
   "latest": {
-    "date": "2026-06-19",
+    "date": "2026-06-21",
     "market": "CN",
     "index_level": 52.77000045776367,
     "dividend_yield": 0.023,
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-0 CN constituents median) [FY1 fallback] [FY2 fallback]",
-    "updated_at": 1781909634,
+    "updated_at": 1782083385,
     "currency": "CNY",
     "implied_cost_of_equity": 0.09010454253637698,
     "implied_erp": 0.07258454253637697,
@@ -47,7 +47,7 @@
   },
   "history": [
     {
-      "date": "2026-06-19",
+      "date": "2026-06-21",
       "market": "CN",
       "index_level": 52.77000045776367,
       "dividend_yield": 0.023,
