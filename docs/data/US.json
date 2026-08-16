@@ -5,9 +5,9 @@
   "currency_symbol": "$",
   "data_quality": "full",
   "display_index_name": "S&P 500",
-  "last_updated": "2026-08-15T22:17:24+00:00",
+  "last_updated": "2026-08-16T22:16:50+00:00",
   "latest": {
-    "date": "2026-08-15",
+    "date": "2026-08-16",
     "market": "US",
     "index_level": 7785.759765625,
     "dividend_yield": 0.0072787576,
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo Finance (SPY/top-15 constituents median \u2014 proxy for S&P Capital IQ consensus)",
-    "updated_at": 1786832227,
+    "updated_at": 1786918589,
     "currency": "USD",
     "implied_cost_of_equity": 0.11588374662185516,
     "implied_erp": 0.06958374662185515,
@@ -47,7 +47,7 @@
   },
   "history": [
     {
-      "date": "2026-08-15",
+      "date": "2026-08-16",
       "market": "US",
       "index_level": 7785.759765625,
       "dividend_yield": 0.0072787576,
