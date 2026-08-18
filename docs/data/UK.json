@@ -5,11 +5,11 @@
   "currency_symbol": "\u00a3",
   "data_quality": "full",
   "display_index_name": "FTSE 100",
-  "last_updated": "2026-08-17T22:20:32+00:00",
+  "last_updated": "2026-08-18T22:19:15+00:00",
   "latest": {
-    "date": "2026-08-17",
+    "date": "2026-08-18",
     "market": "UK",
-    "index_level": 10720.2998046875,
+    "index_level": 10728.0400390625,
     "dividend_yield": 0.029900000000000003,
     "buyback_yield": 0.012,
     "total_yield": 0.04190000000000001,
@@ -17,17 +17,17 @@
     "year1_growth": 0.06,
     "year2_growth": 0.054,
     "rfr_rate": 0.04796,
-    "trailing_eps": 597.1479188549641,
+    "trailing_eps": 597.0038974316018,
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-5 UK constituents median) [FY1 fallback] [FY2 fallback]",
-    "updated_at": 1787005211,
+    "updated_at": 1787091540,
     "currency": "GBP",
-    "implied_cost_of_equity": 0.09442113183318085,
-    "implied_erp": 0.046461131833180846,
-    "pv_stage1": 2083.501110297856,
-    "terminal_value": 13560.482662553643,
-    "pv_terminal": 8636.798694389643,
+    "implied_cost_of_equity": 0.0943764460341265,
+    "implied_erp": 0.04641644603412649,
+    "pv_stage1": 2083.2469044779677,
+    "terminal_value": 13570.263844692645,
+    "pv_terminal": 8644.793134584532,
     "solver_method": "newton",
     "computation_method": "fcfe",
     "annual_growth_rates": [
@@ -38,27 +38,27 @@
       0.04796
     ],
     "cash_flows": [
-      492.77243411830494,
-      519.3821455606934,
-      546.3830920345753,
-      573.6876764205165,
-      601.2017373816443
+      492.65358619953207,
+      519.2568798543068,
+      546.251314181666,
+      573.5493131890378,
+      601.056738249584
     ]
   },
   "history": [
     {
-      "date": "2026-08-17",
+      "date": "2026-08-18",
       "market": "UK",
-      "index_level": 10720.2998046875,
+      "index_level": 10728.0400390625,
       "dividend_yield": 0.029900000000000003,
       "buyback_yield": 0.012,
       "total_yield": 0.04190000000000001,
       "analyst_5yr_growth": 0.056999999999999995,
       "rfr_rate": 0.04796,
-      "trailing_eps": 597.1479188549641,
+      "trailing_eps": 597.0038974316018,
       "payout_ratio": 0.7785,
-      "implied_cost_of_equity": 0.09442113183318085,
-      "implied_erp": 0.046461131833180846,
+      "implied_cost_of_equity": 0.0943764460341265,
+      "implied_erp": 0.04641644603412649,
       "method": "fcfe"
     }
   ]
