@@ -5,9 +5,9 @@
   "currency_symbol": "\u00a5",
   "data_quality": "full",
   "display_index_name": "TOPIX",
-  "last_updated": "2026-08-21T22:20:24+00:00",
+  "last_updated": "2026-08-22T22:17:53+00:00",
   "latest": {
-    "date": "2026-08-21",
+    "date": "2026-08-22",
     "market": "JP",
     "index_level": 424.1000061035156,
     "dividend_yield": 0.0189,
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-15 JP constituents median)",
-    "updated_at": 1787350813,
+    "updated_at": 1787437062,
     "currency": "JPY",
     "implied_cost_of_equity": 0.08041224891703705,
     "implied_erp": 0.05371224891703705,
@@ -47,7 +47,7 @@
   },
   "history": [
     {
-      "date": "2026-08-21",
+      "date": "2026-08-22",
       "market": "JP",
       "index_level": 424.1000061035156,
       "dividend_yield": 0.0189,
