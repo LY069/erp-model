@@ -5,9 +5,9 @@
   "currency_symbol": "\u00a3",
   "data_quality": "full",
   "display_index_name": "FTSE 100",
-  "last_updated": "2026-08-22T22:17:53+00:00",
+  "last_updated": "2026-08-23T22:17:58+00:00",
   "latest": {
-    "date": "2026-08-22",
+    "date": "2026-08-23",
     "market": "UK",
     "index_level": 10816.599609375,
     "dividend_yield": 0.029900000000000003,
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-5 UK constituents median) [FY1 fallback] [FY2 fallback]",
-    "updated_at": 1787437053,
+    "updated_at": 1787523462,
     "currency": "GBP",
     "implied_cost_of_equity": 0.10127186640358535,
     "implied_erp": 0.053311866403585345,
@@ -47,7 +47,7 @@
   },
   "history": [
     {
-      "date": "2026-08-22",
+      "date": "2026-08-23",
       "market": "UK",
       "index_level": 10816.599609375,
       "dividend_yield": 0.029900000000000003,
