@@ -5,11 +5,11 @@
   "currency_symbol": "\u00a5",
   "data_quality": "full",
   "display_index_name": "TOPIX",
-  "last_updated": "2026-08-23T22:17:58+00:00",
+  "last_updated": "2026-08-24T22:21:51+00:00",
   "latest": {
-    "date": "2026-08-23",
+    "date": "2026-08-24",
     "market": "JP",
-    "index_level": 424.1000061035156,
+    "index_level": 424.70001220703125,
     "dividend_yield": 0.0189,
     "buyback_yield": 0.015,
     "total_yield": 0.0339,
@@ -17,17 +17,17 @@
     "year1_growth": 0.4,
     "year2_growth": 0.01,
     "rfr_rate": 0.026699999999999998,
-    "trailing_eps": 21.53833293018658,
+    "trailing_eps": 21.646129884473343,
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-15 JP constituents median)",
-    "updated_at": 1787523469,
+    "updated_at": 1787610101,
     "currency": "JPY",
-    "implied_cost_of_equity": 0.08041224891703705,
-    "implied_erp": 0.05371224891703705,
-    "pv_stage1": 96.32389778394132,
-    "terminal_value": 482.5305235572669,
-    "pv_terminal": 327.7761083195742,
+    "implied_cost_of_equity": 0.08060528887457905,
+    "implied_erp": 0.053905288874579044,
+    "pv_stage1": 96.75617055108974,
+    "terminal_value": 483.2088990097709,
+    "pv_terminal": 327.9438416559416,
     "solver_method": "newton",
     "computation_method": "fcfe",
     "annual_growth_rates": [
@@ -38,27 +38,27 @@
       0.0267
     ],
     "cash_flows": [
-      23.474629060610354,
-      23.70937535121646,
-      24.07845129418373,
-      24.58730923153414,
-      25.2437903880161
+      23.592116961087495,
+      23.82803813069837,
+      24.198961257599578,
+      24.710365972176845,
+      25.370132743633967
     ]
   },
   "history": [
     {
-      "date": "2026-08-23",
+      "date": "2026-08-24",
       "market": "JP",
-      "index_level": 424.1000061035156,
+      "index_level": 424.70001220703125,
       "dividend_yield": 0.0189,
       "buyback_yield": 0.015,
       "total_yield": 0.0339,
       "analyst_5yr_growth": 0.20500000000000002,
       "rfr_rate": 0.026699999999999998,
-      "trailing_eps": 21.53833293018658,
+      "trailing_eps": 21.646129884473343,
       "payout_ratio": 0.7785,
-      "implied_cost_of_equity": 0.08041224891703705,
-      "implied_erp": 0.05371224891703705,
+      "implied_cost_of_equity": 0.08060528887457905,
+      "implied_erp": 0.053905288874579044,
       "method": "fcfe"
     }
   ]
