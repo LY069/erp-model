@@ -5,9 +5,9 @@
   "currency_symbol": "NT$",
   "data_quality": "partial",
   "display_index_name": "TAIEX",
-  "last_updated": "2026-08-29T23:51:55+00:00",
+  "last_updated": "2026-08-31T00:11:06+00:00",
   "latest": {
-    "date": "2026-08-29",
+    "date": "2026-08-31",
     "market": "TW",
     "index_level": 46331.44921875,
     "dividend_yield": 0.015700000000000002,
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-0 TW constituents median) [FY1 fallback] [FY2 fallback]",
-    "updated_at": 1788047507,
+    "updated_at": 1788135057,
     "currency": "TWD",
     "implied_cost_of_equity": 0.046235078090867666,
     "implied_erp": 0.030235078090867666,
@@ -47,7 +47,7 @@
   },
   "history": [
     {
-      "date": "2026-08-29",
+      "date": "2026-08-31",
       "market": "TW",
       "index_level": 46331.44921875,
       "dividend_yield": 0.015700000000000002,
