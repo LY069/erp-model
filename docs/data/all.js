@@ -8,9 +8,9 @@ window.__ERP_SNAPSHOT__ = {
     "currency_symbol": "$",
     "data_quality": "full",
     "display_index_name": "S&P 500",
-    "last_updated": "2026-09-05T23:31:56+00:00",
+    "last_updated": "2026-09-06T23:27:18+00:00",
     "latest": {
-      "date": "2026-09-05",
+      "date": "2026-09-06",
       "market": "US",
       "index_level": 7718.60009765625,
       "dividend_yield": 0.007323099,
@@ -24,7 +24,7 @@ window.__ERP_SNAPSHOT__ = {
       "payout_ratio": 0.7785,
       "data_source": "fcfe",
       "growth_source": "Yahoo Finance (SPY/top-15 constituents median \u2014 proxy for S&P Capital IQ consensus)",
-      "updated_at": 1788651101,
+      "updated_at": 1788737224,
       "currency": "USD",
       "implied_cost_of_equity": 0.11757662036762469,
       "implied_erp": 0.0698766203676247,
@@ -50,7 +50,7 @@ window.__ERP_SNAPSHOT__ = {
     },
     "history": [
       {
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "market": "US",
         "index_level": 7718.60009765625,
         "dividend_yield": 0.007323099,
@@ -73,9 +73,9 @@ window.__ERP_SNAPSHOT__ = {
     "currency_symbol": "\u00a3",
     "data_quality": "full",
     "display_index_name": "FTSE 100",
-    "last_updated": "2026-09-05T23:31:56+00:00",
+    "last_updated": "2026-09-06T23:27:18+00:00",
     "latest": {
-      "date": "2026-09-05",
+      "date": "2026-09-06",
       "market": "UK",
       "index_level": 10831.099609375,
       "dividend_yield": 0.029900000000000003,
@@ -89,7 +89,7 @@ window.__ERP_SNAPSHOT__ = {
       "payout_ratio": 0.7785,
       "data_source": "fcfe",
       "growth_source": "Yahoo info (top-5 UK constituents median) [FY1 fallback] [FY2 fallback]",
-      "updated_at": 1788651103,
+      "updated_at": 1788737225,
       "currency": "GBP",
       "implied_cost_of_equity": 0.10114223421154749,
       "implied_erp": 0.05318223421154748,
@@ -115,7 +115,7 @@ window.__ERP_SNAPSHOT__ = {
     },
     "history": [
       {
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "market": "UK",
         "index_level": 10831.099609375,
         "dividend_yield": 0.029900000000000003,
@@ -138,9 +138,9 @@ window.__ERP_SNAPSHOT__ = {
     "currency_symbol": "\u20ac",
     "data_quality": "full",
     "display_index_name": "STOXX 600",
-    "last_updated": "2026-09-05T23:31:56+00:00",
+    "last_updated": "2026-09-06T23:27:18+00:00",
     "latest": {
-      "date": "2026-09-05",
+      "date": "2026-09-06",
       "market": "EU",
       "index_level": 649.8800048828125,
       "dividend_yield": 0.024399999999999998,
@@ -154,7 +154,7 @@ window.__ERP_SNAPSHOT__ = {
       "payout_ratio": 0.7785,
       "data_source": "fcfe",
       "growth_source": "Yahoo info (top-15 EU constituents median)",
-      "updated_at": 1788651106,
+      "updated_at": 1788737229,
       "currency": "EUR",
       "implied_cost_of_equity": 0.09972448409451859,
       "implied_erp": 0.07002448409451859,
@@ -180,7 +180,7 @@ window.__ERP_SNAPSHOT__ = {
     },
     "history": [
       {
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "market": "EU",
         "index_level": 649.8800048828125,
         "dividend_yield": 0.024399999999999998,
@@ -203,9 +203,9 @@ window.__ERP_SNAPSHOT__ = {
     "currency_symbol": "\u00a5",
     "data_quality": "full",
     "display_index_name": "TOPIX",
-    "last_updated": "2026-09-05T23:31:56+00:00",
+    "last_updated": "2026-09-06T23:27:18+00:00",
     "latest": {
-      "date": "2026-09-05",
+      "date": "2026-09-06",
       "market": "JP",
       "index_level": 427.5,
       "dividend_yield": 0.0189,
@@ -219,7 +219,7 @@ window.__ERP_SNAPSHOT__ = {
       "payout_ratio": 0.7785,
       "data_source": "fcfe",
       "growth_source": "Yahoo info (top-15 JP constituents median)",
-      "updated_at": 1788651109,
+      "updated_at": 1788737232,
       "currency": "JPY",
       "implied_cost_of_equity": 0.08070475296515364,
       "implied_erp": 0.05400475296515364,
@@ -245,7 +245,7 @@ window.__ERP_SNAPSHOT__ = {
     },
     "history": [
       {
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "market": "JP",
         "index_level": 427.5,
         "dividend_yield": 0.0189,
@@ -268,9 +268,9 @@ window.__ERP_SNAPSHOT__ = {
     "currency_symbol": "\u20a9",
     "data_quality": "partial",
     "display_index_name": "KOSPI",
-    "last_updated": "2026-09-05T23:31:56+00:00",
+    "last_updated": "2026-09-06T23:27:18+00:00",
     "latest": {
-      "date": "2026-09-05",
+      "date": "2026-09-06",
       "market": "KR",
       "index_level": 6687.2099609375,
       "dividend_yield": 0.011200000000000002,
@@ -284,7 +284,7 @@ window.__ERP_SNAPSHOT__ = {
       "payout_ratio": 0.7785,
       "data_source": "fcfe",
       "growth_source": "Yahoo info (top-0 KR constituents median) [FY1 fallback] [FY2 fallback]",
-      "updated_at": 1788651110,
+      "updated_at": 1788737233,
       "currency": "KRW",
       "implied_cost_of_equity": 0.11933103827725713,
       "implied_erp": 0.07752103827725713,
@@ -310,7 +310,7 @@ window.__ERP_SNAPSHOT__ = {
     },
     "history": [
       {
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "market": "KR",
         "index_level": 6687.2099609375,
         "dividend_yield": 0.011200000000000002,
@@ -333,9 +333,9 @@ window.__ERP_SNAPSHOT__ = {
     "currency_symbol": "\u20b9",
     "data_quality": "partial",
     "display_index_name": "NIFTY 50",
-    "last_updated": "2026-09-05T23:31:56+00:00",
+    "last_updated": "2026-09-06T23:27:18+00:00",
     "latest": {
-      "date": "2026-09-05",
+      "date": "2026-09-06",
       "market": "IN",
       "index_level": 23897.69921875,
       "dividend_yield": 0.015,
@@ -349,7 +349,7 @@ window.__ERP_SNAPSHOT__ = {
       "payout_ratio": 0.7785,
       "data_source": "fcfe",
       "growth_source": "Yahoo info (top-0 IN constituents median) [FY1 fallback] [FY2 fallback]",
-      "updated_at": 1788651111,
+      "updated_at": 1788737233,
       "currency": "INR",
       "implied_cost_of_equity": 0.12467177997304156,
       "implied_erp": 0.05577177997304156,
@@ -375,7 +375,7 @@ window.__ERP_SNAPSHOT__ = {
     },
     "history": [
       {
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "market": "IN",
         "index_level": 23897.69921875,
         "dividend_yield": 0.015,
@@ -398,9 +398,9 @@ window.__ERP_SNAPSHOT__ = {
     "currency_symbol": "NT$",
     "data_quality": "partial",
     "display_index_name": "TAIEX",
-    "last_updated": "2026-09-05T23:31:56+00:00",
+    "last_updated": "2026-09-06T23:27:18+00:00",
     "latest": {
-      "date": "2026-09-05",
+      "date": "2026-09-06",
       "market": "TW",
       "index_level": 46551.12890625,
       "dividend_yield": 0.015700000000000002,
@@ -414,7 +414,7 @@ window.__ERP_SNAPSHOT__ = {
       "payout_ratio": 0.7785,
       "data_source": "fcfe",
       "growth_source": "Yahoo info (top-0 TW constituents median) [FY1 fallback] [FY2 fallback]",
-      "updated_at": 1788651112,
+      "updated_at": 1788737234,
       "currency": "TWD",
       "implied_cost_of_equity": 0.04889511870021694,
       "implied_erp": 0.029795118700216942,
@@ -440,7 +440,7 @@ window.__ERP_SNAPSHOT__ = {
     },
     "history": [
       {
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "market": "TW",
         "index_level": 46551.12890625,
         "dividend_yield": 0.015700000000000002,
@@ -463,9 +463,9 @@ window.__ERP_SNAPSHOT__ = {
     "currency_symbol": "\u00a5",
     "data_quality": "fallback",
     "display_index_name": "MSCI China",
-    "last_updated": "2026-09-05T23:31:56+00:00",
+    "last_updated": "2026-09-06T23:27:18+00:00",
     "latest": {
-      "date": "2026-09-05",
+      "date": "2026-09-06",
       "market": "CN",
       "index_level": 54.90999984741211,
       "dividend_yield": 0.02,
@@ -479,7 +479,7 @@ window.__ERP_SNAPSHOT__ = {
       "payout_ratio": 0.7785,
       "data_source": "fcfe",
       "growth_source": "Yahoo info (top-0 CN constituents median) [FY1 fallback] [FY2 fallback]",
-      "updated_at": 1788651112,
+      "updated_at": 1788737235,
       "currency": "CNY",
       "implied_cost_of_equity": 0.09357868047888705,
       "implied_erp": 0.07675868047888705,
@@ -505,7 +505,7 @@ window.__ERP_SNAPSHOT__ = {
     },
     "history": [
       {
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "market": "CN",
         "index_level": 54.90999984741211,
         "dividend_yield": 0.02,
@@ -528,9 +528,9 @@ window.__ERP_SNAPSHOT__ = {
     "currency_symbol": "\u00a5",
     "data_quality": "fallback",
     "display_index_name": "CSI 300 (ETF unit, 510300.SS)",
-    "last_updated": "2026-09-05T23:31:56+00:00",
+    "last_updated": "2026-09-06T23:27:18+00:00",
     "latest": {
-      "date": "2026-09-05",
+      "date": "2026-09-06",
       "market": "CN_CSI",
       "index_level": 4.616000175476074,
       "dividend_yield": 0.02664644612742336,
@@ -544,7 +544,7 @@ window.__ERP_SNAPSHOT__ = {
       "payout_ratio": 0.7785,
       "data_source": "fcfe",
       "growth_source": "Yahoo info (top-10 CN_CSI constituents median)",
-      "updated_at": 1788651115,
+      "updated_at": 1788737237,
       "currency": "CNY",
       "implied_cost_of_equity": 0.069824161725257,
       "implied_erp": 0.053004161725257,
@@ -570,7 +570,7 @@ window.__ERP_SNAPSHOT__ = {
     },
     "history": [
       {
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "market": "CN_CSI",
         "index_level": 4.616000175476074,
         "dividend_yield": 0.02664644612742336,
