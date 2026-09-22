@@ -5,9 +5,9 @@
   "currency_symbol": "\u00a5",
   "data_quality": "full",
   "display_index_name": "TOPIX",
-  "last_updated": "2026-09-20T23:49:51+00:00",
+  "last_updated": "2026-09-22T00:34:11+00:00",
   "latest": {
-    "date": "2026-09-20",
+    "date": "2026-09-22",
     "market": "JP",
     "index_level": 426.29998779296875,
     "dividend_yield": 0.0182,
@@ -17,17 +17,17 @@
     "year1_growth": 0.4,
     "year2_growth": 0.01,
     "rfr_rate": 0.0294,
-    "trailing_eps": 22.054911910101257,
+    "trailing_eps": 21.838775112246786,
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-15 JP constituents median)",
-    "updated_at": 1789948181,
+    "updated_at": 1790037242,
     "currency": "JPY",
-    "implied_cost_of_equity": 0.08385642683905399,
-    "implied_erp": 0.054456426839053995,
-    "pv_stage1": 97.89161096896686,
-    "terminal_value": 491.21657425696,
-    "pv_terminal": 328.40837682400206,
+    "implied_cost_of_equity": 0.083321218117858,
+    "implied_erp": 0.05392121811785801,
+    "pv_stage1": 97.07017072844702,
+    "terminal_value": 491.23059478448215,
+    "pv_terminal": 329.2298170645218,
     "solver_method": "newton",
     "computation_method": "fcfe",
     "annual_growth_rates": [
@@ -38,16 +38,16 @@
       0.029400000000000003
     ],
     "cash_flows": [
-      24.037648490819358,
-      24.27802497572755,
-      24.677803120327862,
-      25.243747405220713,
-      25.985913578934206
+      23.802080994837766,
+      24.040101804786147,
+      24.43596214783829,
+      24.99636021309538,
+      25.73125320336039
     ]
   },
   "history": [
     {
-      "date": "2026-09-20",
+      "date": "2026-09-22",
       "market": "JP",
       "index_level": 426.29998779296875,
       "dividend_yield": 0.0182,
@@ -55,10 +55,10 @@
       "total_yield": 0.0332,
       "analyst_5yr_growth": 0.20500000000000002,
       "rfr_rate": 0.0294,
-      "trailing_eps": 22.054911910101257,
+      "trailing_eps": 21.838775112246786,
       "payout_ratio": 0.7785,
-      "implied_cost_of_equity": 0.08385642683905399,
-      "implied_erp": 0.054456426839053995,
+      "implied_cost_of_equity": 0.083321218117858,
+      "implied_erp": 0.05392121811785801,
       "method": "fcfe"
     }
   ]
