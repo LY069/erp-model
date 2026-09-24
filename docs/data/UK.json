@@ -5,9 +5,9 @@
   "currency_symbol": "\u00a3",
   "data_quality": "full",
   "display_index_name": "FTSE 100",
-  "last_updated": "2026-09-22T23:58:47+00:00",
+  "last_updated": "2026-09-24T00:12:56+00:00",
   "latest": {
-    "date": "2026-09-22",
+    "date": "2026-09-24",
     "market": "UK",
     "index_level": 10739.0,
     "dividend_yield": 0.029900000000000003,
@@ -17,17 +17,17 @@
     "year1_growth": 0.06,
     "year2_growth": 0.054,
     "rfr_rate": 0.049886,
-    "trailing_eps": 642.3500765448731,
+    "trailing_eps": 642.2808476025862,
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-5 UK constituents median) [FY1 fallback] [FY2 fallback]",
-    "updated_at": 1790121509,
+    "updated_at": 1790208756,
     "currency": "GBP",
-    "implied_cost_of_equity": 0.09960485300201383,
-    "implied_erp": 0.04971885300201383,
-    "pv_stage1": 2213.0839252956757,
-    "terminal_value": 13706.428117662415,
-    "pv_terminal": 8525.916074704326,
+    "implied_cost_of_equity": 0.09959949745267292,
+    "implied_erp": 0.04971349745267292,
+    "pv_stage1": 2212.876790736642,
+    "terminal_value": 13706.427325292887,
+    "pv_terminal": 8526.123209263364,
     "solver_method": "newton",
     "computation_method": "fcfe",
     "annual_growth_rates": [
@@ -38,16 +38,16 @@
       0.049886
     ],
     "cash_flows": [
-      530.0737066655947,
-      558.6976868255368,
-      588.1012011529158,
-      618.2457004541444,
-      649.0875054669999
+      530.0165782501301,
+      558.6374734756372,
+      588.0378188546953,
+      618.1790693483367,
+      649.0175504018479
     ]
   },
   "history": [
     {
-      "date": "2026-09-22",
+      "date": "2026-09-24",
       "market": "UK",
       "index_level": 10739.0,
       "dividend_yield": 0.029900000000000003,
@@ -55,10 +55,10 @@
       "total_yield": 0.04190000000000001,
       "analyst_5yr_growth": 0.056999999999999995,
       "rfr_rate": 0.049886,
-      "trailing_eps": 642.3500765448731,
+      "trailing_eps": 642.2808476025862,
       "payout_ratio": 0.7785,
-      "implied_cost_of_equity": 0.09960485300201383,
-      "implied_erp": 0.04971885300201383,
+      "implied_cost_of_equity": 0.09959949745267292,
+      "implied_erp": 0.04971349745267292,
       "method": "fcfe"
     }
   ]
