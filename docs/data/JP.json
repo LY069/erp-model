@@ -5,7 +5,7 @@
   "currency_symbol": "\u00a5",
   "data_quality": "full",
   "display_index_name": "TOPIX",
-  "last_updated": "2026-10-17T00:08:24+00:00",
+  "last_updated": "2026-10-17T23:43:48+00:00",
   "latest": {
     "date": "2026-10-17",
     "market": "JP",
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-15 JP constituents median)",
-    "updated_at": 1792195697,
+    "updated_at": 1792280618,
     "currency": "JPY",
     "implied_cost_of_equity": 0.10122588618393588,
     "implied_erp": 0.07072588618393588,
