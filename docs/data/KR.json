@@ -5,9 +5,9 @@
   "currency_symbol": "\u20a9",
   "data_quality": "partial",
   "display_index_name": "KOSPI",
-  "last_updated": "2026-10-17T23:43:48+00:00",
+  "last_updated": "2026-10-18T23:54:03+00:00",
   "latest": {
-    "date": "2026-10-17",
+    "date": "2026-10-18",
     "market": "KR",
     "index_level": 5668.0498046875,
     "dividend_yield": 0.0111,
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-0 KR constituents median) [FY1 fallback] [FY2 fallback]",
-    "updated_at": 1792280620,
+    "updated_at": 1792367633,
     "currency": "KRW",
     "implied_cost_of_equity": 0.14234339439703325,
     "implied_erp": 0.09780339439703326,
@@ -47,7 +47,7 @@
   },
   "history": [
     {
-      "date": "2026-10-17",
+      "date": "2026-10-18",
       "market": "KR",
       "index_level": 5668.0498046875,
       "dividend_yield": 0.0111,

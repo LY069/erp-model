@@ -5,9 +5,9 @@
   "currency_symbol": "\u00a5",
   "data_quality": "fallback",
   "display_index_name": "CSI 300 (ETF unit, 510300.SS)",
-  "last_updated": "2026-10-17T23:43:48+00:00",
+  "last_updated": "2026-10-18T23:54:03+00:00",
   "latest": {
-    "date": "2026-10-17",
+    "date": "2026-10-18",
     "market": "CN_CSI",
     "index_level": 4.236000061035156,
     "dividend_yield": 0.029036826777085162,
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-10 CN_CSI constituents median)",
-    "updated_at": 1792280628,
+    "updated_at": 1792367643,
     "currency": "CNY",
     "implied_cost_of_equity": 0.06947181039678381,
     "implied_erp": 0.05304181039678381,
@@ -47,7 +47,7 @@
   },
   "history": [
     {
-      "date": "2026-10-17",
+      "date": "2026-10-18",
       "market": "CN_CSI",
       "index_level": 4.236000061035156,
       "dividend_yield": 0.029036826777085162,
