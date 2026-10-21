@@ -3,53 +3,53 @@
     "data_quality": "full",
     "name": "United States",
     "currency": "USD",
-    "last_updated": "2026-10-20T00:53:54+00:00",
-    "latest_date": "2026-10-20",
-    "latest_erp": 0.06811682563181078,
+    "last_updated": "2026-10-21T00:22:17+00:00",
+    "latest_date": "2026-10-21",
+    "latest_erp": 0.06804972798135307,
     "history_count": 1
   },
   "UK": {
     "data_quality": "full",
     "name": "United Kingdom",
     "currency": "GBP",
-    "last_updated": "2026-10-20T00:53:54+00:00",
-    "latest_date": "2026-10-20",
-    "latest_erp": 0.049544978355712546,
+    "last_updated": "2026-10-21T00:22:17+00:00",
+    "latest_date": "2026-10-21",
+    "latest_erp": 0.049688724353884856,
     "history_count": 1
   },
   "EU": {
     "data_quality": "full",
     "name": "Europe (STOXX 600)",
     "currency": "EUR",
-    "last_updated": "2026-10-20T00:53:54+00:00",
-    "latest_date": "2026-10-20",
-    "latest_erp": 0.07108975954013151,
+    "last_updated": "2026-10-21T00:22:17+00:00",
+    "latest_date": "2026-10-21",
+    "latest_erp": 0.07115072138501102,
     "history_count": 1
   },
   "JP": {
     "data_quality": "full",
     "name": "Japan (TOPIX)",
     "currency": "JPY",
-    "last_updated": "2026-10-20T00:53:54+00:00",
-    "latest_date": "2026-10-20",
-    "latest_erp": 0.07064366784182267,
+    "last_updated": "2026-10-21T00:22:17+00:00",
+    "latest_date": "2026-10-21",
+    "latest_erp": 0.0703167106708159,
     "history_count": 1
   },
   "KR": {
     "data_quality": "partial",
     "name": "Korea (KOSPI)",
     "currency": "KRW",
-    "last_updated": "2026-10-20T00:53:54+00:00",
-    "latest_date": "2026-10-20",
-    "latest_erp": 0.09397615441345555,
+    "last_updated": "2026-10-21T00:22:17+00:00",
+    "latest_date": "2026-10-21",
+    "latest_erp": 0.0955534214759777,
     "history_count": 1
   },
   "IN": {
     "data_quality": "partial",
     "name": "India (NIFTY 50)",
     "currency": "INR",
-    "last_updated": "2026-10-20T00:53:54+00:00",
-    "latest_date": "2026-10-20",
+    "last_updated": "2026-10-21T00:22:17+00:00",
+    "latest_date": "2026-10-21",
     "latest_erp": 0.05820760788417437,
     "history_count": 1
   },
@@ -57,9 +57,9 @@
     "data_quality": "partial",
     "name": "Taiwan (TAIEX)",
     "currency": "TWD",
-    "last_updated": "2026-10-20T00:53:54+00:00",
-    "latest_date": "2026-10-20",
-    "latest_erp": 0.029664919656201872,
+    "last_updated": "2026-10-21T00:22:17+00:00",
+    "latest_date": "2026-10-21",
+    "latest_erp": 0.03464244856075092,
     "history_count": 1
   }
 }
