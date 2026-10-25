@@ -5,9 +5,9 @@
   "currency_symbol": "\u00a5",
   "data_quality": "fallback",
   "display_index_name": "CSI 300 (ETF unit, 510300.SS)",
-  "last_updated": "2026-10-24T23:58:45+00:00",
+  "last_updated": "2026-10-25T23:46:18+00:00",
   "latest": {
-    "date": "2026-10-24",
+    "date": "2026-10-25",
     "market": "CN_CSI",
     "index_level": 4.177999973297119,
     "dividend_yield": 0.029439923596488934,
@@ -16,49 +16,49 @@
     "analyst_5yr_growth": 0.05630572420861733,
     "year1_growth": 0.036000000000000004,
     "year2_growth": 0.07661144841723466,
-    "rfr_rate": 0.05074101288411016,
+    "rfr_rate": 0.05074852990963605,
     "trailing_eps": 0.24576470431159525,
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-10 CN_CSI constituents median)",
-    "updated_at": 1792886325,
+    "updated_at": 1792971977,
     "currency": "CNY",
-    "implied_cost_of_equity": 0.10037971769946306,
-    "implied_erp": 0.0496387048153529,
-    "pv_stage1": 0.8493610074986505,
-    "terminal_value": 5.370065426722362,
-    "pv_terminal": 3.3286389657984703,
+    "implied_cost_of_equity": 0.10038657486221375,
+    "implied_erp": 0.0496380449525777,
+    "pv_stage1": 0.849349290662856,
+    "terminal_value": 5.3702516534592455,
+    "pv_terminal": 3.328650682634265,
     "solver_method": "newton",
     "computation_method": "fcfe",
     "annual_growth_rates": [
       0.036000000000000004,
       0.07661144841723466,
-      0.06798796990619316,
-      0.05936449139515167,
-      0.05074101288411016
+      0.06799047558136846,
+      0.059369502745502255,
+      0.05074852990963605
     ],
     "cash_flows": [
       0.19821562390961367,
       0.213401209956255,
-      0.22790992499670606,
-      0.24143968177804268,
-      0.2536905757818778
+      0.22791045971082025,
+      0.24144139037435047,
+      0.2536941859951873
     ]
   },
   "history": [
     {
-      "date": "2026-10-24",
+      "date": "2026-10-25",
       "market": "CN_CSI",
       "index_level": 4.177999973297119,
       "dividend_yield": 0.029439923596488934,
       "buyback_yield": 0.003,
       "total_yield": 0.03243992359648894,
       "analyst_5yr_growth": 0.05630572420861733,
-      "rfr_rate": 0.05074101288411016,
+      "rfr_rate": 0.05074852990963605,
       "trailing_eps": 0.24576470431159525,
       "payout_ratio": 0.7785,
-      "implied_cost_of_equity": 0.10037971769946306,
-      "implied_erp": 0.0496387048153529,
+      "implied_cost_of_equity": 0.10038657486221375,
+      "implied_erp": 0.0496380449525777,
       "method": "fcfe"
     }
   ]
