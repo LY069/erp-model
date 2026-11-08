@@ -5,9 +5,9 @@
   "currency_symbol": "\u20b9",
   "data_quality": "partial",
   "display_index_name": "NIFTY 50",
-  "last_updated": "2026-11-07T01:34:48+00:00",
+  "last_updated": "2026-11-08T01:02:13+00:00",
   "latest": {
-    "date": "2026-11-07",
+    "date": "2026-11-08",
     "market": "IN",
     "index_level": 25030.349609375,
     "dividend_yield": 0.015,
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-0 IN constituents median) [FY1 fallback] [FY2 fallback]",
-    "updated_at": 1794015282,
+    "updated_at": 1794099727,
     "currency": "INR",
     "implied_cost_of_equity": 0.12416410708104006,
     "implied_erp": 0.05356410708104006,
@@ -47,7 +47,7 @@
   },
   "history": [
     {
-      "date": "2026-11-07",
+      "date": "2026-11-08",
       "market": "IN",
       "index_level": 25030.349609375,
       "dividend_yield": 0.015,
