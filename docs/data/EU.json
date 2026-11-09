@@ -5,9 +5,9 @@
   "currency_symbol": "\u20ac",
   "data_quality": "full",
   "display_index_name": "STOXX 600",
-  "last_updated": "2026-11-08T01:02:13+00:00",
+  "last_updated": "2026-11-09T01:24:43+00:00",
   "latest": {
-    "date": "2026-11-08",
+    "date": "2026-11-09",
     "market": "EU",
     "index_level": 648.3300170898438,
     "dividend_yield": 0.026000000000000002,
@@ -21,7 +21,7 @@
     "payout_ratio": 0.7785,
     "data_source": "fcfe",
     "growth_source": "Yahoo info (top-15 EU constituents median)",
-    "updated_at": 1794099720,
+    "updated_at": 1794187475,
     "currency": "EUR",
     "implied_cost_of_equity": 0.09901136651392321,
     "implied_erp": 0.06431612841868511,
@@ -47,7 +47,7 @@
   },
   "history": [
     {
-      "date": "2026-11-08",
+      "date": "2026-11-09",
       "market": "EU",
       "index_level": 648.3300170898438,
       "dividend_yield": 0.026000000000000002,
